@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: fraudlens-ai
+    env: docker
+    region: oregon
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: GEMINI_API_KEY
+        sync: false # Set this in the Render Dashboard securely!
