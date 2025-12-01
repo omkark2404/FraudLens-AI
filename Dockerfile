@@ -1,5 +1,5 @@
-# Use official Python 3.9 slim image (stable for ML dependencies)
-FROM python:3.9-slim
+# Use official Python 3.11 slim image (stable for ML dependencies)
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
@@ -26,10 +26,10 @@ COPY . .
 
 # Set necessary environment variables
 ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
+ENV FLASK_DEBUG=false
 
 # Expose the default port
-EXPOSE 10000
+EXPOSE 5000
 
 # Start the application using Gunicorn (1 worker, 4 threads for concurrent background OCR)
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 4 app:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 4 app:app"]

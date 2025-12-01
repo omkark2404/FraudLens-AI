@@ -182,7 +182,10 @@ FraudLens-AI/
 4. **Configure environment variables**:
    Copy `.env.example` to `.env` and adjust the values as needed.
    ```bash
+   # On macOS/Linux:
    cp .env.example .env
+   # On Windows:
+   copy .env.example .env
    ```
 
 5. **Start the application**:

@@ -7,11 +7,9 @@ paddlepaddle
 paddleocr
 opencv-python-headless
 Pillow
-PyMuPDF
+pypdfium2
 numpy
-
 python-dateutil==2.8.2
-
 gunicorn==21.2.0
 
 google-generativeai

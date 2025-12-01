@@ -10,7 +10,7 @@ from typing import List, Optional
 import cv2
 import numpy as np
 from PIL import Image
-import fitz  # PyMuPDF
+
 
 from models.schemas import OCRBlock
 from core.config import config
@@ -114,14 +114,17 @@ def preprocess(image: Image.Image) -> np.ndarray:
 
 # ── PDF handling ───────────────────────────────────────────────────────────────
 
+import pypdfium2 as pdfium
+
 def pdf_to_image(pdf_path: str, page_index: int = 0, dpi: int = 200) -> Image.Image:
     """Render a PDF page to a PIL Image at the specified DPI."""
-    doc = fitz.open(pdf_path)
-    page = doc.load_page(page_index)
-    mat = fitz.Matrix(dpi / 72, dpi / 72)
-    pix = page.get_pixmap(matrix=mat)
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    doc.close()
+    pdf = pdfium.PdfDocument(pdf_path)
+    page = pdf[page_index]
+    # Calculate scale factor for requested DPI (72 is standard)
+    scale = dpi / 72.0
+    bitmap = page.render(scale=scale)
+    img = bitmap.to_pil()
+    pdf.close()
     return img
 
 
