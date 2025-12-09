@@ -94,14 +94,20 @@ def preprocess(image: Image.Image) -> np.ndarray:
     enhanced = clahe.apply(gray)
 
     # 4. Adaptive threshold
-    thresh = cv2.adaptiveThreshold(
-        enhanced, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 15, 8
-    )
+    if config.PREPROCESS_BINARIZE:
+        thresh = cv2.adaptiveThreshold(
+            enhanced, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, 15, 8
+        )
+    else:
+        thresh = enhanced
 
     # 5. Reduce noise
-    denoised = cv2.medianBlur(thresh, 3)
+    if config.PREPROCESS_BLUR:
+        denoised = cv2.medianBlur(thresh, 3)
+    else:
+        denoised = thresh
 
     # 6. Convert back to BGR (PaddleOCR expects colour image)
     bgr_out = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)

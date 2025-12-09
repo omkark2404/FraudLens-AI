@@ -44,15 +44,20 @@ def upload():
         insurance_file = request.files.get("insurance_file")
 
         errors = []
-        if not license_file or license_file.filename == "":
-            errors.append("No Driver's License file selected.")
-        elif not _allowed(license_file.filename):
-            errors.append("Driver's License: invalid file type (JPG, PNG, PDF only).")
+        has_file = False
 
-        if not insurance_file or insurance_file.filename == "":
-            errors.append("No Insurance Card file selected.")
-        elif not _allowed(insurance_file.filename):
-            errors.append("Insurance Card: invalid file type (JPG, PNG, PDF only).")
+        if license_file and license_file.filename != "":
+            has_file = True
+            if not _allowed(license_file.filename):
+                errors.append("Driver's License: invalid file type (JPG, PNG, PDF only).")
+
+        if insurance_file and insurance_file.filename != "":
+            has_file = True
+            if not _allowed(insurance_file.filename):
+                errors.append("Insurance Card: invalid file type (JPG, PNG, PDF only).")
+
+        if not has_file:
+            errors.append("At least one document (Driver's License or Insurance Card) is required.")
 
         if errors:
             for e in errors:
@@ -61,13 +66,21 @@ def upload():
 
         # Save files with unique prefix to avoid collisions
         job_id      = str(uuid.uuid4())
-        dl_filename = f"{job_id}_dl_{secure_filename(license_file.filename)}"
-        ic_filename = f"{job_id}_ic_{secure_filename(insurance_file.filename)}"
-        dl_path     = os.path.join(config.UPLOAD_FOLDER, dl_filename)
-        ic_path     = os.path.join(config.UPLOAD_FOLDER, ic_filename)
+        dl_filename = None
+        ic_filename = None
+        dl_path     = None
+        ic_path     = None
 
-        license_file.save(dl_path)
-        insurance_file.save(ic_path)
+        if license_file and license_file.filename != "":
+            dl_filename = f"{job_id}_dl_{secure_filename(license_file.filename)}"
+            dl_path = os.path.join(config.UPLOAD_FOLDER, dl_filename)
+            license_file.save(dl_path)
+
+        if insurance_file and insurance_file.filename != "":
+            ic_filename = f"{job_id}_ic_{secure_filename(insurance_file.filename)}"
+            ic_path = os.path.join(config.UPLOAD_FOLDER, ic_filename)
+            insurance_file.save(ic_path)
+
         logger.info("Files saved for job %s", job_id)
 
         create_job(job_id, dl_filename, ic_filename)

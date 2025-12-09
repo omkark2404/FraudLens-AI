@@ -14,7 +14,7 @@ class TestExtractionService(unittest.TestCase):
         values = {"dob": None, "issue_date": None, "expiry_date": None, "license_number": None}
         confidences = {"dob": None, "issue_date": None, "expiry_date": None, "license_number": None}
         
-        updated_values, _ = _regex_extract(full_text, values, confidences)
+        updated_values, _ = _regex_extract(full_text, values, confidences, doc_type="license")
         
         self.assertIsNotNone(updated_values["dob"])
         self.assertIsNotNone(updated_values["issue_date"])

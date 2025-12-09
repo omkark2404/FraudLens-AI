@@ -22,11 +22,13 @@ class ExtractedFields:
     name: Optional[str] = None
     dob: Optional[str] = None
     license_number: Optional[str] = None
+    policy_number: Optional[str] = None
     issue_date: Optional[str] = None
     expiry_date: Optional[str] = None
-    expired: Optional[bool] = None
     # Per-field OCR confidence (0.0–1.0, None = extracted via regex / not available)
     field_confidence: dict = field(default_factory=dict)
+    # Field sources: 'ocr' or 'llm'
+    field_sources: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -37,28 +39,32 @@ class ValidationResult:
 
 
 @dataclass
-class FraudResult:
-    """Fraud detection output."""
-    status: str = "Valid"               # "Valid" | "Suspicious"
-    flags: List[str] = field(default_factory=list)
+class FinalVerdict:
+    """Final verdict combining validation, fraud, and quality."""
+    verdict: str = "needs_review" # "no_anomalies_detected" | "needs_review" | "rejected" | "needs_better_image"
+    reasons: List[str] = field(default_factory=list)
 
 
 @dataclass
 class DocumentResult:
     """Complete result for a single document (license or insurance)."""
     doc_type: str = ""                  # "license" | "insurance"
+    evaluated_at: str = ""              # UTC ISO-8601
+    expired: bool = False
     fields: ExtractedFields = field(default_factory=ExtractedFields)
     validation: ValidationResult = field(default_factory=ValidationResult)
-    fraud: FraudResult = field(default_factory=FraudResult)
+    verdict: FinalVerdict = field(default_factory=FinalVerdict)
     raw_blocks: List[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         from core.config import config
         res = {
             "doc_type": self.doc_type,
+            "evaluated_at": self.evaluated_at,
+            "expired": self.expired,
             "fields": asdict(self.fields),
             "validation": asdict(self.validation),
-            "fraud": asdict(self.fraud),
+            "verdict": asdict(self.verdict),
         }
         if config.DEBUG:
             res["raw_blocks"] = self.raw_blocks
@@ -72,6 +78,7 @@ class JobResult:
     status: str = "pending"             # pending | processing | done | error
     license: Optional[DocumentResult] = None
     insurance: Optional[DocumentResult] = None
+    cross_check: Optional[dict] = None
     error: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -80,6 +87,7 @@ class JobResult:
             "status": self.status,
             "license": self.license.to_dict() if self.license else None,
             "insurance": self.insurance.to_dict() if self.insurance else None,
+            "cross_check": self.cross_check,
             "error": self.error,
         }
 

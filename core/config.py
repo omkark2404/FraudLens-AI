@@ -28,9 +28,19 @@ class Config:
     OCR_CONFIDENCE_THRESHOLD: float = float(os.getenv("OCR_CONF_THRESHOLD", "0.6"))
     FRAUD_ANOMALY_THRESHOLD: int = int(os.getenv("FRAUD_THRESHOLD", "2"))
     HIGH_CONFIDENCE_THRESHOLD: float = float(os.getenv("HIGH_CONF_THRESHOLD", "0.75"))
+    OVERLAP_THRESHOLD_BOXES: int = int(os.getenv("OVERLAP_THRESHOLD_BOXES", "5"))
+    TEXT_SIZE_VARIANCE_THRESHOLD: float = float(os.getenv("TEXT_SIZE_VARIANCE_THRESHOLD", "2.5"))
+
+    # ── Preprocessing ──────────────────────────────────────────────────────
+    PREPROCESS_BINARIZE: bool = os.getenv("PREPROCESS_BINARIZE", "true").lower() == "true"
+    PREPROCESS_BLUR: bool = os.getenv("PREPROCESS_BLUR", "true").lower() == "true"
 
     # ── LLM Integration ──────────────────────────────────────────────
+    GEMINI_ENABLED: bool = os.getenv("GEMINI_ENABLED", "false").lower() == "true"
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    GEMINI_TIMEOUT: int = int(os.getenv("GEMINI_TIMEOUT", "10"))
+    GEMINI_RETRIES: int = int(os.getenv("GEMINI_RETRIES", "2"))
 
 
 config = Config()
