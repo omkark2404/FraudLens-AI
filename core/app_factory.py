@@ -49,6 +49,8 @@ def create_app() -> Flask:
 
     # ── Database ───────────────────────────────────────────────────────────
     init_db()
+    from services.job_service import cleanup_stale_jobs
+    cleanup_stale_jobs()
 
     # ── Blueprints ─────────────────────────────────────────────────────────
     from routes.upload_routes import upload_bp

@@ -1,20 +1,5 @@
 """
 services/validation_service.py
-Validation scoring (0-100) and fraud detection engine.
-"""
-import re
-import logging
-import datetime
-import statistics
-from typing import List, Tuple
-
-from models.schemas import OCRBlock, ExtractedFields, ValidationResult, FraudResult
-from core.config import config
-
-logger = logging.getLogger(__name__)
-
-"""
-services/validation_service.py
 Validation scoring (0-100), fraud heuristics, and final verdict engine.
 """
 import re

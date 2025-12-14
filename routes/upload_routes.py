@@ -46,15 +46,21 @@ def upload():
         errors = []
         has_file = False
 
+        from core.security import is_safe_file
+
         if license_file and license_file.filename != "":
             has_file = True
             if not _allowed(license_file.filename):
                 errors.append("Driver's License: invalid file type (JPG, PNG, PDF only).")
+            elif not is_safe_file(license_file):
+                errors.append("Driver's License: invalid file content.")
 
         if insurance_file and insurance_file.filename != "":
             has_file = True
             if not _allowed(insurance_file.filename):
                 errors.append("Insurance Card: invalid file type (JPG, PNG, PDF only).")
+            elif not is_safe_file(insurance_file):
+                errors.append("Insurance Card: invalid file content.")
 
         if not has_file:
             errors.append("At least one document (Driver's License or Insurance Card) is required.")
@@ -62,7 +68,7 @@ def upload():
         if errors:
             for e in errors:
                 flash(e, "warning")
-            return redirect(url_for("upload.index"))
+            return render_template("index.html"), 400
 
         # Save files with unique prefix to avoid collisions
         job_id      = str(uuid.uuid4())
@@ -84,13 +90,8 @@ def upload():
         logger.info("Files saved for job %s", job_id)
 
         create_job(job_id, dl_filename, ic_filename)
-
-        # Dispatch background worker (daemon=True prevents zombie threads on shutdown)
-        threading.Thread(
-            target=process_job,
-            args=(job_id, dl_path, ic_path),
-            daemon=True,
-        ).start()
+        from services.job_service import submit_job
+        submit_job(job_id, dl_path, ic_path)
 
         return redirect(url_for("upload.status", job_id=job_id))
 

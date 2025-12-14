@@ -14,6 +14,7 @@ class Config:
     # ── Flask ──────────────────────────────────────────────────────────────
     SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me-in-production")
     DEBUG: bool = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    API_KEY: str = os.getenv("API_KEY", "")
 
     # ── File storage ───────────────────────────────────────────────────────
     BASE_DIR: str = _BASE_DIR

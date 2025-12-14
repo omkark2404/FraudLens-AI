@@ -121,3 +121,23 @@ def process_job(job_id: str, dl_path: str, ic_path: str) -> None:
     finally:
         # Always clean up uploaded files to prevent disk accumulation
         _cleanup_files(dl_path, ic_path)
+
+import concurrent.futures
+
+# Global ThreadPoolExecutor for jobs
+_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
+def submit_job(job_id: str, dl_path: str, ic_path: str):
+    """Submit a job to the ThreadPoolExecutor."""
+    _executor.submit(process_job, job_id, dl_path, ic_path)
+
+def cleanup_stale_jobs():
+    """Mark jobs stuck in processing state as error on startup."""
+    from models.database import _get_conn
+    try:
+        with _get_conn() as conn:
+            conn.execute("UPDATE jobs SET status = 'error', result_json = '{\"error\": \"Job interrupted by server restart\"}' WHERE status = 'processing'")
+            conn.commit()
+            logger.info("Cleaned up stale processing jobs.")
+    except Exception as e:
+        logger.error(f"Failed to clean up stale jobs: {e}")

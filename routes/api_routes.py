@@ -30,6 +30,16 @@ def _allowed(filename: str) -> bool:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+@api_bp.before_request
+def require_api_key():
+    """Require X-API-Key header if API_KEY is configured."""
+    if request.path == "/api/health" or request.method == "OPTIONS":
+        return
+    if config.API_KEY:
+        key = request.headers.get("X-API-Key")
+        if key != config.API_KEY:
+            return jsonify({"error": "Unauthorized"}), 401
+
 @api_bp.route("/health", methods=["GET"])
 def health():
     """Health check endpoint for load balancers and deployments."""
@@ -49,21 +59,27 @@ def api_upload():
     errors = []
     has_file = False
     
+    from core.security import is_safe_file
+    
     if license_file and license_file.filename != "":
         has_file = True
         if not _allowed(license_file.filename):
             errors.append("license_file: unsupported type — use jpg, png, or pdf")
+        elif not is_safe_file(license_file):
+            errors.append("license_file: invalid file content")
             
     if insurance_file and insurance_file.filename != "":
         has_file = True
         if not _allowed(insurance_file.filename):
             errors.append("insurance_file: unsupported type — use jpg, png, or pdf")
+        elif not is_safe_file(insurance_file):
+            errors.append("insurance_file: invalid file content")
 
     if not has_file:
         errors.append("at least one of license_file or insurance_file is required")
 
     if errors:
-        return jsonify({"error": errors}), 400
+        return jsonify({"error": errors}), 422
 
     job_id      = str(uuid.uuid4())
     dl_filename = None
@@ -82,13 +98,8 @@ def api_upload():
         insurance_file.save(ic_path)
 
     create_job(job_id, dl_filename, ic_filename)
-
-    # Dispatch background worker (daemon=True prevents zombie threads on shutdown)
-    threading.Thread(
-        target=process_job,
-        args=(job_id, dl_path, ic_path),
-        daemon=True,
-    ).start()
+    from services.job_service import submit_job
+    submit_job(job_id, dl_path, ic_path)
 
     return jsonify({"job_id": job_id, "status": "pending"}), 202
 

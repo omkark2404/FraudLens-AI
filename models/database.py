@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS jobs (
 
 def _get_conn() -> sqlite3.Connection:
     """Return a new SQLite connection (one-per-call, thread-safe)."""
-    conn = sqlite3.connect(config.DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(config.DB_PATH, check_same_thread=False, timeout=10.0)
+    conn.execute("PRAGMA journal_mode=WAL;")
     conn.row_factory = sqlite3.Row
     return conn
 
