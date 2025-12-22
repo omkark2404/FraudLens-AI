@@ -3,6 +3,7 @@ app.py — application entry point
 Run locally:  python app.py
 Production:   gunicorn app:app
 """
+
 from core.app_factory import create_app
 from core.config import config
 

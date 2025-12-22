@@ -3,17 +3,16 @@ services/ocr_service.py
 Full OCR pipeline:
   preprocess → PaddleOCR → structured OCR blocks with confidence scores
 """
+
 import logging
 import math
-from typing import List, Optional
 
 import cv2
 import numpy as np
 from PIL import Image
 
-
-from models.schemas import OCRBlock
 from core.config import config
+from models.schemas import OCRBlock
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +24,14 @@ def _get_ocr():
     global _ocr_engine
     if _ocr_engine is None:
         from paddleocr import PaddleOCR
+
         _ocr_engine = PaddleOCR(use_angle_cls=True, lang="en")
         logger.info("PaddleOCR engine initialised")
     return _ocr_engine
 
 
 # ── Image pre-processing ───────────────────────────────────────────────────────
+
 
 def _to_numpy(image: Image.Image) -> np.ndarray:
     """Convert PIL Image to BGR numpy array."""
@@ -42,8 +43,9 @@ def _deskew(image: np.ndarray) -> np.ndarray:
     """Correct image skew using Hough line transform."""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
     edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-    lines = cv2.HoughLinesP(edges, 1, math.pi / 180, threshold=80,
-                            minLineLength=80, maxLineGap=10)
+    lines = cv2.HoughLinesP(
+        edges, 1, math.pi / 180, threshold=80, minLineLength=80, maxLineGap=10
+    )
     if lines is None:
         return image
 
@@ -52,21 +54,21 @@ def _deskew(image: np.ndarray) -> np.ndarray:
         x1, y1, x2, y2 = line[0]
         if x2 - x1 != 0:
             angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
-            if abs(angle) < 30:           # ignore near-vertical lines
+            if abs(angle) < 30:  # ignore near-vertical lines
                 angles.append(angle)
 
     if not angles:
         return image
 
     median_angle = float(np.median(angles))
-    if abs(median_angle) < 0.5:         # already straight enough
+    if abs(median_angle) < 0.5:  # already straight enough
         return image
 
     h, w = image.shape[:2]
     M = cv2.getRotationMatrix2D((w / 2, h / 2), median_angle, 1.0)
-    deskewed = cv2.warpAffine(image, M, (w, h),
-                              flags=cv2.INTER_CUBIC,
-                              borderMode=cv2.BORDER_REPLICATE)
+    deskewed = cv2.warpAffine(
+        image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE
+    )
     logger.debug("Deskewed by %.2f°", median_angle)
     return deskewed
 
@@ -82,7 +84,7 @@ def preprocess(image: Image.Image) -> np.ndarray:
     w, h = image.size
     if max(w, h) > max_dim:
         ratio = max_dim / max(w, h)
-        image = image.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+        image = image.resize((int(w * ratio), int(h * ratio)), Image.Resampling.LANCZOS)
 
     bgr = _to_numpy(image)
 
@@ -96,9 +98,7 @@ def preprocess(image: Image.Image) -> np.ndarray:
     # 4. Adaptive threshold
     if config.PREPROCESS_BINARIZE:
         thresh = cv2.adaptiveThreshold(
-            enhanced, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY, 15, 8
+            enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 8
         )
     else:
         thresh = enhanced
@@ -122,6 +122,7 @@ def preprocess(image: Image.Image) -> np.ndarray:
 
 import pypdfium2 as pdfium
 
+
 def pdf_to_image(pdf_path: str, page_index: int = 0, dpi: int = 200) -> Image.Image:
     """Render a PDF page to a PIL Image at the specified DPI."""
     pdf = pdfium.PdfDocument(pdf_path)
@@ -136,7 +137,8 @@ def pdf_to_image(pdf_path: str, page_index: int = 0, dpi: int = 200) -> Image.Im
 
 # ── OCR extraction ─────────────────────────────────────────────────────────────
 
-def extract_text(processed_image: np.ndarray) -> List[OCRBlock]:
+
+def extract_text(processed_image: np.ndarray) -> list[OCRBlock]:
     """
     Run PaddleOCR on a preprocessed numpy array.
     Returns a list of OCRBlock objects with text, bbox, and confidence.
@@ -144,7 +146,7 @@ def extract_text(processed_image: np.ndarray) -> List[OCRBlock]:
     ocr = _get_ocr()
     result = ocr.ocr(processed_image)
 
-    blocks: List[OCRBlock] = []
+    blocks: list[OCRBlock] = []
     if not result or not result[0]:
         logger.warning("PaddleOCR returned empty result")
         return blocks
@@ -162,14 +164,18 @@ def extract_text(processed_image: np.ndarray) -> List[OCRBlock]:
 
         blocks.append(OCRBlock(text=text.strip(), bbox=bbox, confidence=round(conf, 4)))
 
-    logger.info("OCR extracted %d blocks (confidence ≥ %.2f)",
-                len(blocks), config.OCR_CONFIDENCE_THRESHOLD)
+    logger.info(
+        "OCR extracted %d blocks (confidence ≥ %.2f)",
+        len(blocks),
+        config.OCR_CONFIDENCE_THRESHOLD,
+    )
     return blocks
 
 
 # ── High-level entry point ────────────────────────────────────────────────────
 
-def process_document(file_path: str) -> List[OCRBlock]:
+
+def process_document(file_path: str) -> list[OCRBlock]:
     """
     Full pipeline for a file path (image or PDF):
     load → preprocess → OCR → OCRBlock list
@@ -184,5 +190,7 @@ def process_document(file_path: str) -> List[OCRBlock]:
         return extract_text(processed)
 
     except Exception as exc:
-        logger.error("process_document failed for %s: %s", file_path, exc, exc_info=True)
+        logger.error(
+            "process_document failed for %s: %s", file_path, exc, exc_info=True
+        )
         raise

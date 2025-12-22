@@ -7,18 +7,17 @@ HTML-serving routes — thin controller, no processing logic.
   GET  /status/<id>   → polling page (JS drives /api/result/<id>)
   GET  /result/<id>   → server-rendered final result page
 """
-import os
-import uuid
+
 import json
 import logging
-import threading
+import os
+import uuid
+
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from werkzeug.utils import secure_filename
-from flask import (Blueprint, render_template, request,
-                   redirect, url_for, flash, abort)
 
 from core.config import config
 from models.database import create_job, get_job
-from services.job_service import process_job
 
 logger = logging.getLogger(__name__)
 upload_bp = Blueprint("upload", __name__)
@@ -32,6 +31,7 @@ def _allowed(filename: str) -> bool:
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+
 @upload_bp.route("/")
 def index():
     return render_template("index.html")
@@ -40,7 +40,7 @@ def index():
 @upload_bp.route("/upload", methods=["POST"])
 def upload():
     try:
-        license_file  = request.files.get("license_file")
+        license_file = request.files.get("license_file")
         insurance_file = request.files.get("insurance_file")
 
         errors = []
@@ -51,7 +51,9 @@ def upload():
         if license_file and license_file.filename != "":
             has_file = True
             if not _allowed(license_file.filename):
-                errors.append("Driver's License: invalid file type (JPG, PNG, PDF only).")
+                errors.append(
+                    "Driver's License: invalid file type (JPG, PNG, PDF only)."
+                )
             elif not is_safe_file(license_file):
                 errors.append("Driver's License: invalid file content.")
 
@@ -63,7 +65,9 @@ def upload():
                 errors.append("Insurance Card: invalid file content.")
 
         if not has_file:
-            errors.append("At least one document (Driver's License or Insurance Card) is required.")
+            errors.append(
+                "At least one document (Driver's License or Insurance Card) is required."
+            )
 
         if errors:
             for e in errors:
@@ -71,11 +75,11 @@ def upload():
             return render_template("index.html"), 400
 
         # Save files with unique prefix to avoid collisions
-        job_id      = str(uuid.uuid4())
+        job_id = str(uuid.uuid4())
         dl_filename = None
         ic_filename = None
-        dl_path     = None
-        ic_path     = None
+        dl_path = None
+        ic_path = None
 
         if license_file and license_file.filename != "":
             dl_filename = f"{job_id}_dl_{secure_filename(license_file.filename)}"
@@ -91,6 +95,7 @@ def upload():
 
         create_job(job_id, dl_filename, ic_filename)
         from services.job_service import submit_job
+
         submit_job(job_id, dl_path, ic_path)
 
         return redirect(url_for("upload.status", job_id=job_id))

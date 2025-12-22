@@ -2,10 +2,13 @@
 core/app_factory.py
 Flask application factory — registers blueprints and initialises extensions.
 """
-import os
+
 import logging
+import os
+
 from flask import Flask
 from flask_cors import CORS
+
 from core.config import config
 from models.database import init_db
 
@@ -21,12 +24,14 @@ def create_app() -> Flask:
     @app.before_request
     def log_request():
         from flask import request
+
         logging.getLogger(__name__).info(f"{request.method} {request.path}")
 
     @app.errorhandler(413)
     def too_large(e):
         from flask import jsonify, request
-        if request.path.startswith('/api/'):
+
+        if request.path.startswith("/api/"):
             return jsonify({"error": "File too large (max 16MB)"}), 413
         return "File too large (max 16MB)", 413
 
@@ -50,11 +55,12 @@ def create_app() -> Flask:
     # ── Database ───────────────────────────────────────────────────────────
     init_db()
     from services.job_service import cleanup_stale_jobs
+
     cleanup_stale_jobs()
 
     # ── Blueprints ─────────────────────────────────────────────────────────
-    from routes.upload_routes import upload_bp
     from routes.api_routes import api_bp
+    from routes.upload_routes import upload_bp
 
     app.register_blueprint(upload_bp)
     app.register_blueprint(api_bp, url_prefix="/api")

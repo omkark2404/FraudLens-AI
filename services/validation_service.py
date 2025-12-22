@@ -2,14 +2,14 @@
 services/validation_service.py
 Validation scoring (0-100), fraud heuristics, and final verdict engine.
 """
-import re
-import logging
-import datetime
-import statistics
-from typing import List, Tuple, Dict, Any
 
-from models.schemas import OCRBlock, ExtractedFields, ValidationResult, FinalVerdict
+import datetime
+import logging
+import re
+import statistics
+
 from core.config import config
+from models.schemas import ExtractedFields, FinalVerdict, OCRBlock, ValidationResult
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,8 @@ def _valid_date_str(date_str) -> bool:
             continue
     return False
 
-def _parse_date(date_str) -> datetime.date:
+
+def _parse_date(date_str) -> datetime.date | None:
     formats = ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]
     for fmt in formats:
         try:
@@ -37,13 +38,15 @@ def _parse_date(date_str) -> datetime.date:
             continue
     return None
 
+
 def _is_future_date(date_str) -> bool:
     dt = _parse_date(date_str)
     if dt:
-        return dt > datetime.date.today()
+        return dt > datetime.datetime.now(datetime.timezone.utc).date()
     return False
 
-def _is_plausible_name(name: str) -> bool:
+
+def _is_plausible_name(name: str | None) -> bool:
     if not name:
         return False
     # Only letters, spaces, hyphens, min 2 tokens, total length between 3 and 100
@@ -53,13 +56,14 @@ def _is_plausible_name(name: str) -> bool:
     if len(tokens) < 2:
         return False
     for char in name:
-        if not (char.isalpha() or char.isspace() or char == '-'):
+        if not (char.isalpha() or char.isspace() or char == "-"):
             return False
     return True
 
-def compute_validation_score(fields: ExtractedFields,
-                             blocks: List[OCRBlock],
-                             doc_type: str = "license") -> ValidationResult:
+
+def compute_validation_score(
+    fields: ExtractedFields, blocks: list[OCRBlock], doc_type: str = "license"
+) -> ValidationResult:
     """
     Correctness-based scoring profiles. Max score 100.
     """
@@ -114,7 +118,9 @@ def compute_validation_score(fields: ExtractedFields,
         else:
             breakdown["not_expired"] = 0
 
-        if fields.license_number and _GENERIC_LICENSE_RE.match(fields.license_number.upper()):
+        if fields.license_number and _GENERIC_LICENSE_RE.match(
+            fields.license_number.upper()
+        ):
             pts = 5
             score += pts
             breakdown["license_format_unverified"] = pts
@@ -147,7 +153,7 @@ def compute_validation_score(fields: ExtractedFields,
             breakdown["not_expired"] = pts
         else:
             breakdown["not_expired"] = 0
-            
+
         if fields.policy_number:
             pts = 15
             score += pts
@@ -173,19 +179,24 @@ def compute_validation_score(fields: ExtractedFields,
     logger.info("Validation score: %d breakdown: %s", final, breakdown)
     return ValidationResult(score=final, breakdown=breakdown)
 
+
 # ── Fraud and Quality ─────────────────────────────────────────────────────────
 
-def _box_height(bbox: List[float]) -> float:
+
+def _box_height(bbox: list[float]) -> float:
     return max(0, bbox[3] - bbox[1])
 
-def _boxes_overlap(b1: List[float], b2: List[float]) -> bool:
-    return not (b1[2] <= b2[0] or b2[2] <= b1[0] or
-                b1[3] <= b2[1] or b2[3] <= b1[1])
 
-def evaluate_verdict(blocks: List[OCRBlock],
-                     fields: ExtractedFields,
-                     validation: ValidationResult,
-                     doc_type: str = "license") -> FinalVerdict:
+def _boxes_overlap(b1: list[float], b2: list[float]) -> bool:
+    return not (b1[2] <= b2[0] or b2[2] <= b1[0] or b1[3] <= b2[1] or b2[3] <= b1[1])
+
+
+def evaluate_verdict(
+    blocks: list[OCRBlock],
+    fields: ExtractedFields,
+    validation: ValidationResult,
+    doc_type: str = "license",
+) -> FinalVerdict:
     """
     Evaluates fraud vs quality and outputs a FinalVerdict.
     Missing fields and low OCR confidence -> needs_better_image (Quality)
@@ -193,7 +204,7 @@ def evaluate_verdict(blocks: List[OCRBlock],
     """
     quality_issues = []
     fraud_flags = []
-    
+
     if not blocks:
         quality_issues.append("no OCR content extracted")
     else:
@@ -205,15 +216,19 @@ def evaluate_verdict(blocks: List[OCRBlock],
                 mean_h = statistics.mean(heights)
                 cv = stdev / mean_h if mean_h else 0
                 if cv > config.TEXT_SIZE_VARIANCE_THRESHOLD:
-                    fraud_flags.append("inconsistent text sizing (high bbox height variance)")
+                    fraud_flags.append(
+                        "inconsistent text sizing (high bbox height variance)"
+                    )
             except statistics.StatisticsError:
                 pass
 
         # Overlap check ignoring low confidence
-        high_conf_blocks = [b for b in blocks if b.confidence >= config.OCR_CONFIDENCE_THRESHOLD]
+        high_conf_blocks = [
+            b for b in blocks if b.confidence >= config.OCR_CONFIDENCE_THRESHOLD
+        ]
         overlap_count = 0
         for i, b1 in enumerate(high_conf_blocks):
-            for b2 in high_conf_blocks[i + 1:]:
+            for b2 in high_conf_blocks[i + 1 :]:
                 if _boxes_overlap(b1.bbox, b2.bbox):
                     overlap_count += 1
         if overlap_count > config.OVERLAP_THRESHOLD_BOXES:
@@ -230,16 +245,16 @@ def evaluate_verdict(blocks: List[OCRBlock],
         missing.append("license number")
     if doc_type == "insurance" and not fields.policy_number:
         missing.append("policy number")
-        
+
     if missing:
         quality_issues.append(f"missing critical fields: {', '.join(missing)}")
-        
+
     expired = False
     if fields.expiry_date and not _is_future_date(fields.expiry_date):
         expired = True
 
     reasons = quality_issues + fraud_flags
-    
+
     # Determine verdict
     if len(fraud_flags) >= config.FRAUD_ANOMALY_THRESHOLD:
         verdict = "rejected"

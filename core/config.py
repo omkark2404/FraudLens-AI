@@ -2,7 +2,9 @@
 core/config.py
 Centralised configuration loaded from environment variables (.env).
 """
+
 import os
+
 from dotenv import load_dotenv
 
 # Load .env from project root (two levels up from this file)
@@ -30,10 +32,14 @@ class Config:
     FRAUD_ANOMALY_THRESHOLD: int = int(os.getenv("FRAUD_THRESHOLD", "2"))
     HIGH_CONFIDENCE_THRESHOLD: float = float(os.getenv("HIGH_CONF_THRESHOLD", "0.75"))
     OVERLAP_THRESHOLD_BOXES: int = int(os.getenv("OVERLAP_THRESHOLD_BOXES", "5"))
-    TEXT_SIZE_VARIANCE_THRESHOLD: float = float(os.getenv("TEXT_SIZE_VARIANCE_THRESHOLD", "2.5"))
+    TEXT_SIZE_VARIANCE_THRESHOLD: float = float(
+        os.getenv("TEXT_SIZE_VARIANCE_THRESHOLD", "2.5")
+    )
 
     # ── Preprocessing ──────────────────────────────────────────────────────
-    PREPROCESS_BINARIZE: bool = os.getenv("PREPROCESS_BINARIZE", "true").lower() == "true"
+    PREPROCESS_BINARIZE: bool = (
+        os.getenv("PREPROCESS_BINARIZE", "true").lower() == "true"
+    )
     PREPROCESS_BLUR: bool = os.getenv("PREPROCESS_BLUR", "true").lower() == "true"
 
     # ── LLM Integration ──────────────────────────────────────────────

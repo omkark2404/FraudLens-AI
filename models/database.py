@@ -3,10 +3,12 @@ models/database.py
 SQLite persistence layer.
 Thread-safe: uses check_same_thread=False + explicit connection-per-call pattern.
 """
-import sqlite3
+
 import json
 import logging
-from typing import Optional, Dict, Any
+import sqlite3
+from typing import Any
+
 from core.config import config
 
 logger = logging.getLogger(__name__)
@@ -42,7 +44,10 @@ def init_db() -> None:
 
 # ── CRUD helpers ───────────────────────────────────────────────────────────────
 
-def create_job(job_id: str, dl_filename: Optional[str], ic_filename: Optional[str]) -> None:
+
+def create_job(
+    job_id: str, dl_filename: str | None, ic_filename: str | None
+) -> None:
     """Insert a new job record with status=pending."""
     sql = "INSERT INTO jobs (id, status, dl_filename, ic_filename) VALUES (?, 'pending', ?, ?)"
     with _get_conn() as conn:
@@ -78,7 +83,7 @@ def save_job_error(job_id: str, error: str) -> None:
     logger.error("Job error saved: %s — %s", job_id, error)
 
 
-def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+def get_job(job_id: str) -> dict[str, Any] | None:
     """Return job row as a dict, or None if not found."""
     sql = "SELECT id, status, created_at, dl_filename, ic_filename, result_json FROM jobs WHERE id = ?"
     with _get_conn() as conn:

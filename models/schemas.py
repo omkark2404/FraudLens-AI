@@ -3,28 +3,30 @@ models/schemas.py
 Data schemas (dataclasses) used across the application.
 All date fields are stored as ISO-format strings for easy JSON serialisation.
 """
-from dataclasses import dataclass, field, asdict
-from typing import List, Optional
+
 import json
+from dataclasses import asdict, dataclass, field
 
 
 @dataclass
 class OCRBlock:
     """Raw OCR output block."""
+
     text: str
-    bbox: List[float]          # [x1, y1, x2, y2]
+    bbox: list[float]  # [x1, y1, x2, y2]
     confidence: float
 
 
 @dataclass
 class ExtractedFields:
     """Structured extraction result for one document."""
-    name: Optional[str] = None
-    dob: Optional[str] = None
-    license_number: Optional[str] = None
-    policy_number: Optional[str] = None
-    issue_date: Optional[str] = None
-    expiry_date: Optional[str] = None
+
+    name: str | None = None
+    dob: str | None = None
+    license_number: str | None = None
+    policy_number: str | None = None
+    issue_date: str | None = None
+    expiry_date: str | None = None
     # Per-field OCR confidence (0.0–1.0, None = extracted via regex / not available)
     field_confidence: dict = field(default_factory=dict)
     # Field sources: 'ocr' or 'llm'
@@ -34,30 +36,34 @@ class ExtractedFields:
 @dataclass
 class ValidationResult:
     """Validation scoring output."""
-    score: int = 0                      # 0-100
+
+    score: int = 0  # 0-100
     breakdown: dict = field(default_factory=dict)
 
 
 @dataclass
 class FinalVerdict:
     """Final verdict combining validation, fraud, and quality."""
-    verdict: str = "needs_review" # "no_anomalies_detected" | "needs_review" | "rejected" | "needs_better_image"
-    reasons: List[str] = field(default_factory=list)
+
+    verdict: str = "needs_review"  # "no_anomalies_detected" | "needs_review" | "rejected" | "needs_better_image"
+    reasons: list[str] = field(default_factory=list)
 
 
 @dataclass
 class DocumentResult:
     """Complete result for a single document (license or insurance)."""
-    doc_type: str = ""                  # "license" | "insurance"
-    evaluated_at: str = ""              # UTC ISO-8601
+
+    doc_type: str = ""  # "license" | "insurance"
+    evaluated_at: str = ""  # UTC ISO-8601
     expired: bool = False
     fields: ExtractedFields = field(default_factory=ExtractedFields)
     validation: ValidationResult = field(default_factory=ValidationResult)
     verdict: FinalVerdict = field(default_factory=FinalVerdict)
-    raw_blocks: List[dict] = field(default_factory=list)
+    raw_blocks: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         from core.config import config
+
         res = {
             "doc_type": self.doc_type,
             "evaluated_at": self.evaluated_at,
@@ -74,12 +80,13 @@ class DocumentResult:
 @dataclass
 class JobResult:
     """Full job result persisted in SQLite."""
+
     job_id: str = ""
-    status: str = "pending"             # pending | processing | done | error
-    license: Optional[DocumentResult] = None
-    insurance: Optional[DocumentResult] = None
-    cross_check: Optional[dict] = None
-    error: Optional[str] = None
+    status: str = "pending"  # pending | processing | done | error
+    license: DocumentResult | None = None
+    insurance: DocumentResult | None = None
+    cross_check: dict | None = None
+    error: str | None = None
 
     def to_dict(self) -> dict:
         return {

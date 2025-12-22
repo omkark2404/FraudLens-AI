@@ -1,0 +1,5 @@
+[tool.ruff]
+lint.ignore = ["E501", "BLE001", "DTZ007", "DTZ011", "G201", "RUF012", "SIM201"]
+
+[tool.mypy]
+ignore_missing_imports = true
