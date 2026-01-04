@@ -1,3 +1,8 @@
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+
 import os
 import time
 
@@ -9,15 +14,17 @@ OUTPUT_FILE = "docs/EVALUATION.md"
 
 def evaluate():
     if not os.path.exists(FIXTURES_DIR):
-        print(f"Error: {FIXTURES_DIR} not found. Run generate_synthetic_docs.py first.")
+        logger.error(
+            f"Error: {FIXTURES_DIR} not found. Run generate_synthetic_docs.py first."
+        )
         return
 
     files = [f for f in os.listdir(FIXTURES_DIR) if f.endswith(".png")]
     if not files:
-        print("No fixtures found.")
+        logger.info("No fixtures found.")
         return
 
-    print(f"Evaluating {len(files)} files...")
+    logger.info(f"Evaluating {len(files)} files...")
     start_time = time.time()
 
     results = []
@@ -27,75 +34,230 @@ def evaluate():
         expected_valid = "valid" in filename
         path = os.path.join(FIXTURES_DIR, filename)
         import services.ocr_service
+
         try:
             import paddleocr
         except ImportError:
-            if i == 0:
-                print("WARNING: paddleocr not installed. Using mock OCR data for evaluation.")
-            
+            logger.info(
+                "WARNING: paddleocr not installed. Using mock OCR data for evaluation."
+            )
+
             def mock_process_document(file_path):
                 from models.schemas import OCRBlock
+
                 if "_dl_" in file_path:
                     if "valid" in file_path:
                         blocks = [
-                            OCRBlock(text="DRIVER LICENSE", bbox=[100, 100, 200, 110], confidence=0.9),
-                            OCRBlock(text="NAME", bbox=[100, 200, 150, 210], confidence=0.9),
-                            OCRBlock(text="JOHN DOE", bbox=[160, 200, 250, 210], confidence=0.9),
-                            OCRBlock(text="DOB", bbox=[100, 300, 150, 310], confidence=0.9),
-                            OCRBlock(text="1990-01-01", bbox=[160, 300, 250, 310], confidence=0.9),
-                            OCRBlock(text="ISS", bbox=[100, 400, 150, 410], confidence=0.9),
-                            OCRBlock(text="2020-01-01", bbox=[160, 400, 250, 410], confidence=0.9),
-                            OCRBlock(text="EXP", bbox=[100, 500, 150, 510], confidence=0.9),
-                            OCRBlock(text="2030-01-01", bbox=[160, 500, 250, 510], confidence=0.9),
-                            OCRBlock(text="LIC", bbox=[100, 600, 150, 610], confidence=0.9),
-                            OCRBlock(text="A123456", bbox=[160, 600, 250, 610], confidence=0.9),
+                            OCRBlock(
+                                text="DRIVER LICENSE",
+                                bbox=[100, 100, 200, 110],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="NAME", bbox=[100, 200, 150, 210], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="JOHN DOE",
+                                bbox=[160, 200, 250, 210],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="DOB", bbox=[100, 300, 150, 310], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="1990-01-01",
+                                bbox=[160, 300, 250, 310],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="ISS", bbox=[100, 400, 150, 410], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="2020-01-01",
+                                bbox=[160, 400, 250, 410],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="EXP", bbox=[100, 500, 150, 510], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="2030-01-01",
+                                bbox=[160, 500, 250, 510],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="LIC", bbox=[100, 600, 150, 610], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="A123456",
+                                bbox=[160, 600, 250, 610],
+                                confidence=0.9,
+                            ),
                         ]
                     else:
                         blocks = [
-                            OCRBlock(text="DRIVER LICENSE", bbox=[100, 100, 200, 110], confidence=0.9),
-                            OCRBlock(text="NAME", bbox=[100, 200, 150, 210], confidence=0.9),
-                            OCRBlock(text="JANE DOE", bbox=[160, 200, 250, 210], confidence=0.9),
-                            OCRBlock(text="DOB", bbox=[100, 300, 150, 310], confidence=0.9),
-                            OCRBlock(text="1990-01-01", bbox=[160, 300, 250, 310], confidence=0.9),
-                            OCRBlock(text="ISS", bbox=[100, 400, 150, 410], confidence=0.9),
-                            OCRBlock(text="2020-01-01", bbox=[160, 400, 250, 410], confidence=0.9),
-                            OCRBlock(text="EXP", bbox=[100, 500, 150, 510], confidence=0.9),
-                            OCRBlock(text="2018-01-01", bbox=[160, 500, 250, 510], confidence=0.9),
-                            OCRBlock(text="LIC", bbox=[100, 600, 150, 610], confidence=0.9),
-                            OCRBlock(text="X99", bbox=[160, 600, 250, 610], confidence=0.9),
-                            OCRBlock(text="overlap overlap overlap", bbox=[100, 700, 200, 710], confidence=0.9),
-                            OCRBlock(text="overlap overlap overlap", bbox=[100, 705, 200, 715], confidence=0.9),
+                            OCRBlock(
+                                text="DRIVER LICENSE",
+                                bbox=[100, 100, 200, 110],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="NAME", bbox=[100, 200, 150, 210], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="JANE DOE",
+                                bbox=[160, 200, 250, 210],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="DOB", bbox=[100, 300, 150, 310], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="1990-01-01",
+                                bbox=[160, 300, 250, 310],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="ISS", bbox=[100, 400, 150, 410], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="2020-01-01",
+                                bbox=[160, 400, 250, 410],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="EXP", bbox=[100, 500, 150, 510], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="2018-01-01",
+                                bbox=[160, 500, 250, 510],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="LIC", bbox=[100, 600, 150, 610], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="X99", bbox=[160, 600, 250, 610], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="overlap overlap overlap",
+                                bbox=[100, 700, 200, 710],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="overlap overlap overlap",
+                                bbox=[100, 705, 200, 715],
+                                confidence=0.9,
+                            ),
                         ]
                 else:
                     if "valid" in file_path:
                         blocks = [
-                            OCRBlock(text="AUTO INSURANCE", bbox=[100, 100, 200, 110], confidence=0.9),
-                            OCRBlock(text="INSURED", bbox=[100, 200, 150, 210], confidence=0.9),
-                            OCRBlock(text="JOHN DOE", bbox=[160, 200, 250, 210], confidence=0.9),
-                            OCRBlock(text="EFFECTIVE", bbox=[100, 300, 150, 310], confidence=0.9),
-                            OCRBlock(text="2020-01-01", bbox=[160, 300, 250, 310], confidence=0.9),
-                            OCRBlock(text="EXPIRES", bbox=[100, 400, 150, 410], confidence=0.9),
-                            OCRBlock(text="2030-01-01", bbox=[160, 400, 250, 410], confidence=0.9),
-                            OCRBlock(text="POLICY NO", bbox=[100, 500, 150, 510], confidence=0.9),
-                            OCRBlock(text="POL123456", bbox=[160, 500, 250, 510], confidence=0.9),
+                            OCRBlock(
+                                text="AUTO INSURANCE",
+                                bbox=[100, 100, 200, 110],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="INSURED",
+                                bbox=[100, 200, 150, 210],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="JOHN DOE",
+                                bbox=[160, 200, 250, 210],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="EFFECTIVE",
+                                bbox=[100, 300, 150, 310],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="2020-01-01",
+                                bbox=[160, 300, 250, 310],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="EXPIRES",
+                                bbox=[100, 400, 150, 410],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="2030-01-01",
+                                bbox=[160, 400, 250, 410],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="POLICY NO",
+                                bbox=[100, 500, 150, 510],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="POL123456",
+                                bbox=[160, 500, 250, 510],
+                                confidence=0.9,
+                            ),
                         ]
                     else:
                         blocks = [
-                            OCRBlock(text="AUTO INSURANCE", bbox=[100, 100, 200, 110], confidence=0.9),
-                            OCRBlock(text="INSURED", bbox=[100, 200, 150, 210], confidence=0.9),
-                            OCRBlock(text="JANE DOE", bbox=[160, 200, 250, 210], confidence=0.9),
-                            OCRBlock(text="EFFECTIVE", bbox=[100, 300, 150, 310], confidence=0.9),
-                            OCRBlock(text="2020-01-01", bbox=[160, 300, 250, 310], confidence=0.9),
-                            OCRBlock(text="EXPIRES", bbox=[100, 400, 150, 410], confidence=0.9),
-                            OCRBlock(text="2018-01-01", bbox=[160, 400, 250, 410], confidence=0.9),
-                            OCRBlock(text="POLICY NO", bbox=[100, 500, 150, 510], confidence=0.9),
-                            OCRBlock(text="X", bbox=[160, 500, 250, 510], confidence=0.9),
-                            OCRBlock(text="overlap overlap overlap", bbox=[100, 600, 200, 610], confidence=0.9),
-                            OCRBlock(text="overlap overlap overlap", bbox=[100, 605, 200, 615], confidence=0.9),
+                            OCRBlock(
+                                text="AUTO INSURANCE",
+                                bbox=[100, 100, 200, 110],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="INSURED",
+                                bbox=[100, 200, 150, 210],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="JANE DOE",
+                                bbox=[160, 200, 250, 210],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="EFFECTIVE",
+                                bbox=[100, 300, 150, 310],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="2020-01-01",
+                                bbox=[160, 300, 250, 310],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="EXPIRES",
+                                bbox=[100, 400, 150, 410],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="2018-01-01",
+                                bbox=[160, 400, 250, 410],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="POLICY NO",
+                                bbox=[100, 500, 150, 510],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="X", bbox=[160, 500, 250, 510], confidence=0.9
+                            ),
+                            OCRBlock(
+                                text="overlap overlap overlap",
+                                bbox=[100, 600, 200, 610],
+                                confidence=0.9,
+                            ),
+                            OCRBlock(
+                                text="overlap overlap overlap",
+                                bbox=[100, 605, 200, 615],
+                                confidence=0.9,
+                            ),
                         ]
                 return blocks
-            services.ocr_service.process_document = mock_process_document
 
+            services.ocr_service.process_document = mock_process_document
 
         try:
             res = _process_one_document(path, doc_type)
@@ -113,12 +275,12 @@ def evaluate():
                     "correct": correct,
                 }
             )
-            print(
+            logger.info(
                 f"{filename}: Expected={expected_valid}, Got={verdict} (Reasons: {getattr(res.verdict, 'reasons', [])}) -> Correct={correct}"
             )
-            print(res.fields)
+            logger.debug(res.fields)
         except Exception as e:
-            print(f"Error processing {filename}: {e}")
+            logger.error(f"Error processing {filename}: {e}")
 
     total = len(results)
     correct = sum(1 for r in results if r["correct"])
@@ -182,7 +344,7 @@ Duration: {duration:.2f} seconds.
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write(markdown)
 
-    print(f"Evaluation complete. Results saved to {OUTPUT_FILE}")
+    logger.info(f"Evaluation complete. Results saved to {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":

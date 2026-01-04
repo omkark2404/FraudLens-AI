@@ -1,3 +1,8 @@
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+
 import os
 
 from PIL import Image, ImageDraw, ImageFont
@@ -27,7 +32,7 @@ def create_image(filename, lines, fraudulent=False):
 
 def generate_all():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print("Generating synthetic driver's licenses...")
+    logger.info("Generating synthetic driver's licenses...")
 
     # 5 Valid Licenses
     for i in range(1, 6):
@@ -59,7 +64,7 @@ def generate_all():
             fraudulent=True,
         )
 
-    print("Generating synthetic insurance cards...")
+    logger.info("Generating synthetic insurance cards...")
 
     # 5 Valid Insurance
     for i in range(1, 6):
@@ -89,7 +94,7 @@ def generate_all():
             fraudulent=True,
         )
 
-    print(f"Generated 20 synthetic documents in {OUTPUT_DIR}")
+    logger.info(f"Generated 20 synthetic documents in {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":
