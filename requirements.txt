@@ -13,3 +13,10 @@ python-dateutil==2.8.2
 gunicorn==21.2.0
 
 google-generativeai
+
+# Dev Dependencies
+pytest==8.0.0
+ruff==0.3.0
+mypy==1.8.0
+types-python-dateutil
+types-Flask-Cors
