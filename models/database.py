@@ -45,9 +45,7 @@ def init_db() -> None:
 # ── CRUD helpers ───────────────────────────────────────────────────────────────
 
 
-def create_job(
-    job_id: str, dl_filename: str | None, ic_filename: str | None
-) -> None:
+def create_job(job_id: str, dl_filename: str | None, ic_filename: str | None) -> None:
     """Insert a new job record with status=pending."""
     sql = "INSERT INTO jobs (id, status, dl_filename, ic_filename) VALUES (?, 'pending', ?, ?)"
     with _get_conn() as conn:

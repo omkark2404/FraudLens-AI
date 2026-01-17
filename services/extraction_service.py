@@ -211,7 +211,12 @@ def _regex_extract(
         if values.get("issue_date") is None and len(dates_parsed) >= 2:
             values["issue_date"] = _format_date(dates_parsed[1])
             confidences["issue_date"] = None
-        if values.get("expiry_date") is None and len(dates_parsed) >= 3 or values.get("expiry_date") is None and len(dates_parsed) >= 2:
+        if (
+            values.get("expiry_date") is None
+            and len(dates_parsed) >= 3
+            or values.get("expiry_date") is None
+            and len(dates_parsed) >= 2
+        ):
             values["expiry_date"] = _format_date(dates_parsed[-1])
             confidences["expiry_date"] = None
 
@@ -270,7 +275,6 @@ def _llm_extract_fallback(
         import google.generativeai as genai
 
         genai.configure(api_key=config.GEMINI_API_KEY)
-
 
         prompt = f"""
         Extract structured data from this {doc_type} document.

@@ -1,5 +1,3 @@
-
-
 def is_safe_file(file_storage) -> bool:
     """
     Check if a FileStorage object contains a safe file type (JPG, PNG, PDF)
