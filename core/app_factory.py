@@ -40,8 +40,8 @@ def create_app() -> Flask:
     app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
     app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
 
-    # ── CORS — allow REST API calls from any origin ────────────────────────
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # ── CORS ───────────────────────────────────────────────────────────────
+    CORS(app, resources={r"/api/*": {"origins": config.CORS_ORIGINS}})
 
     # ── Logging ────────────────────────────────────────────────────────────
     logging.basicConfig(
@@ -63,6 +63,6 @@ def create_app() -> Flask:
     from routes.upload_routes import upload_bp
 
     app.register_blueprint(upload_bp)
-    app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(api_bp, url_prefix="/api/v1")
 
     return app

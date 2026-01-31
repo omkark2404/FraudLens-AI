@@ -89,6 +89,8 @@ The system awards points up to 100 based on the logical correctness and presence
 5. **Start the application**:
    ```bash
    python app.py
+   # Or for production on Windows:
+   # waitress-serve --port=5000 app:app
    ```
    The application will be available locally at `http://localhost:5000`.
 

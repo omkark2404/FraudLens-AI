@@ -1,7 +1,8 @@
 """
 app.py — application entry point
 Run locally:  python app.py
-Production:   gunicorn app:app
+Production (Linux):   gunicorn app:app
+Production (Windows): waitress-serve --port=5000 app:app
 """
 
 from core.app_factory import create_app

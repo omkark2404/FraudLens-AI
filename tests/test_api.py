@@ -20,19 +20,19 @@ class TestAPI(unittest.TestCase):
 
     def test_unauthorized_access(self):
         # Without API key
-        resp = self.client.post("/api/upload")
+        resp = self.client.post("/api/v1/upload")
         self.assertEqual(resp.status_code, 401)
         
         # With wrong API key
         resp = self.client.post(
-            "/api/upload",
+            "/api/v1/upload",
             headers={"X-API-Key": "wrong-key"}
         )
         self.assertEqual(resp.status_code, 401)
 
     def test_submit_job_missing_files(self):
         resp = self.client.post(
-            "/api/upload",
+            "/api/v1/upload",
             headers={"X-API-Key": "test-api-key"}
         )
         self.assertEqual(resp.status_code, 422)
@@ -53,7 +53,7 @@ class TestAPI(unittest.TestCase):
         }
 
         resp = self.client.post(
-            "/api/upload",
+            "/api/v1/upload",
             headers={"X-API-Key": "test-api-key"},
             data=data,
             content_type="multipart/form-data"
@@ -73,7 +73,7 @@ class TestAPI(unittest.TestCase):
         }
 
         resp = self.client.get(
-            "/api/result/job-123",
+            "/api/v1/result/job-123",
             headers={"X-API-Key": "test-api-key"}
         )
         self.assertEqual(resp.status_code, 200)
@@ -84,7 +84,7 @@ class TestAPI(unittest.TestCase):
         mock_get_job.return_value = None
 
         resp = self.client.get(
-            "/api/result/job-999",
+            "/api/v1/result/job-999",
             headers={"X-API-Key": "test-api-key"}
         )
         self.assertEqual(resp.status_code, 404)

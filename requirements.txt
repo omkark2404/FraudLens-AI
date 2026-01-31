@@ -20,3 +20,6 @@ ruff==0.3.0
 mypy==1.8.0
 types-python-dateutil
 types-Flask-Cors
+
+# Windows Production Server
+waitress==3.0.0

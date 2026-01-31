@@ -2,9 +2,9 @@
 routes/api_routes.py
 REST API — thin controller, no processing logic.
 
-  POST /api/upload           → { job_id, status }
-  GET  /api/result/<job_id>  → { status, data }
-  GET  /api/jobs             → list of 20 most recent jobs
+  POST /api/v1/upload           → { job_id, status }
+  GET  /api/v1/result/<job_id>  → { status, data }
+  GET  /api/v1/jobs             → list of 20 most recent jobs
 """
 
 import json
@@ -34,7 +34,7 @@ def _allowed(filename: str) -> bool:
 @api_bp.before_request
 def require_api_key():
     """Require X-API-Key header if API_KEY is configured."""
-    if request.path == "/api/health" or request.method == "OPTIONS":
+    if request.path == "/api/v1/health" or request.method == "OPTIONS":
         return
     if config.API_KEY:
         key = request.headers.get("X-API-Key")
@@ -51,7 +51,7 @@ def health():
 @api_bp.route("/upload", methods=["POST"])
 def api_upload():
     """
-    POST /api/upload
+    POST /api/v1/upload
     multipart/form-data: license_file, insurance_file
     Returns: { "job_id": "...", "status": "pending" }
     """
@@ -110,7 +110,7 @@ def api_upload():
 @api_bp.route("/result/<job_id>", methods=["GET"])
 def api_result(job_id: str):
     """
-    GET /api/result/<job_id>
+    GET /api/v1/result/<job_id>
 
     Returns:
         202  { "status": "pending" | "processing" }
@@ -141,7 +141,7 @@ def api_result(job_id: str):
 @api_bp.route("/jobs", methods=["GET"])
 def api_jobs():
     """
-    GET /api/jobs
+    GET /api/v1/jobs
     Returns the 20 most recent jobs (id, status, created_at).
     """
     import sqlite3
