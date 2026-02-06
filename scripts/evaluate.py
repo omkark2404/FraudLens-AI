@@ -294,10 +294,6 @@ def evaluate():
     # False Positive (FP): Expected Valid, Got Fraud
     # False Negative (FN): Expected Fraud, Got Valid
     tp = sum(
-        1 for r in results if not r["expected_valid"] and r["correct"] != False
-    )  # wait, logic is easier:
-
-    tp = sum(
         1
         for r in results
         if not r["expected_valid"]
@@ -314,11 +310,7 @@ def evaluate():
         for r in results
         if not r["expected_valid"] and r["verdict"] == "no_anomalies_detected"
     )
-    sum(
-        1
-        for r in results
-        if r["expected_valid"] and r["verdict"] == "no_anomalies_detected"
-    )
+
 
     precision = (tp / (tp + fp)) * 100 if (tp + fp) > 0 else 0
     recall = (tp / (tp + fn)) * 100 if (tp + fn) > 0 else 0

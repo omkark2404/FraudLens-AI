@@ -10,7 +10,7 @@ class TestExtractionService(unittest.TestCase):
         self.assertEqual(_parse_date("2020-12-01"), datetime.date(2020, 12, 1))
         self.assertEqual(
             _parse_date("12-01-2020"), datetime.date(2020, 1, 12)
-        )  # Note: %m-%d-%Y is before %d-%m-%Y in list if ambiguity, wait let's check code. Actually it will just match the first working format.
+        )
 
     def test_regex_extract_dates(self):
         full_text = "DOB: 12/05/1980 ISS: 01/01/2020 EXP: 01/01/2030 LIC: D1234567"
