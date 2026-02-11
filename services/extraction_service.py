@@ -211,12 +211,7 @@ def _regex_extract(
         if values.get("issue_date") is None and len(dates_parsed) >= 2:
             values["issue_date"] = _format_date(dates_parsed[1])
             confidences["issue_date"] = None
-        if (
-            values.get("expiry_date") is None
-            and len(dates_parsed) >= 3
-            or values.get("expiry_date") is None
-            and len(dates_parsed) >= 2
-        ):
+        if values.get("expiry_date") is None and len(dates_parsed) >= 2:
             values["expiry_date"] = _format_date(dates_parsed[-1])
             confidences["expiry_date"] = None
 
