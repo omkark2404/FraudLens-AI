@@ -1,5 +1,9 @@
 [tool.ruff]
-lint.ignore = ["E501", "BLE001", "DTZ007", "DTZ011", "G201", "RUF012", "SIM201"]
+line-length = 88
+target-version = "py311"
+lint.select = ["E", "F", "I", "W"]
+lint.ignore = ["E501"]
 
 [tool.mypy]
+python_version = "3.11"
 ignore_missing_imports = true
