@@ -142,15 +142,19 @@ def api_result(job_id: str):
 def api_jobs():
     """
     GET /api/v1/jobs
-    Returns the 20 most recent jobs (id, status, created_at).
+    Returns recent jobs (id, status, created_at).
+    Supports ?limit=N (max 50, default 20).
     """
     import sqlite3
-
     from core.config import config as cfg
+
+    limit = request.args.get("limit", 20, type=int)
+    limit = max(1, min(limit, 50))
 
     with sqlite3.connect(cfg.DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
-            "SELECT id, status, created_at FROM jobs ORDER BY created_at DESC LIMIT 20"
+            "SELECT id, status, created_at FROM jobs ORDER BY created_at DESC LIMIT ?",
+            (limit,),
         ).fetchall()
     return jsonify([dict(r) for r in rows]), 200
