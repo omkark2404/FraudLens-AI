@@ -1,12 +1,12 @@
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
-
 import os
 import time
 
 from services.job_service import _process_one_document
+
+logger = logging.getLogger(__name__)
 
 FIXTURES_DIR = "fixtures/synthetic"
 OUTPUT_FILE = "docs/EVALUATION.md"
@@ -36,7 +36,7 @@ def evaluate():
         import services.ocr_service
 
         try:
-            import paddleocr
+            import paddleocr  # noqa: F401 - intentional check for optional dependency
         except ImportError:
             logger.info(
                 "WARNING: paddleocr not installed. Using mock OCR data for evaluation."
@@ -279,7 +279,7 @@ def evaluate():
                 f"{filename}: Expected={expected_valid}, Got={verdict} (Reasons: {getattr(res.verdict, 'reasons', [])}) -> Correct={correct}"
             )
             logger.debug(res.fields)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - evaluation script gracefully continues on corrupt fixtures
             logger.error(f"Error processing {filename}: {e}")
 
     total = len(results)
@@ -310,7 +310,6 @@ def evaluate():
         for r in results
         if not r["expected_valid"] and r["verdict"] == "no_anomalies_detected"
     )
-
 
     precision = (tp / (tp + fp)) * 100 if (tp + fp) > 0 else 0
     recall = (tp / (tp + fn)) * 100 if (tp + fn) > 0 else 0

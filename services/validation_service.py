@@ -22,7 +22,9 @@ def _valid_date_str(date_str) -> bool:
     formats = ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]
     for fmt in formats:
         try:
-            datetime.datetime.strptime(str(date_str), fmt)
+            datetime.datetime.strptime(str(date_str), fmt).replace(
+                tzinfo=datetime.timezone.utc
+            )
             return True
         except ValueError:
             continue
@@ -33,7 +35,11 @@ def _parse_date(date_str) -> datetime.date | None:
     formats = ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]
     for fmt in formats:
         try:
-            return datetime.datetime.strptime(str(date_str), fmt).date()
+            return (
+                datetime.datetime.strptime(str(date_str), fmt)
+                .replace(tzinfo=datetime.timezone.utc)
+                .date()
+            )
         except ValueError:
             continue
     return None
@@ -55,10 +61,7 @@ def _is_plausible_name(name: str | None) -> bool:
     tokens = name.split()
     if len(tokens) < 2:
         return False
-    for char in name:
-        if not (char.isalpha() or char.isspace() or char == "-"):
-            return False
-    return True
+    return all(char.isalpha() or char.isspace() or char == "-" for char in name)
 
 
 def compute_validation_score(
@@ -85,8 +88,10 @@ def compute_validation_score(
     if doc_type == "license":
         # License specific logic
         # DOB not in future, age >= 16
-        if dob_dt and dob_dt <= datetime.date.today():
-            age = (datetime.date.today() - dob_dt).days / 365.25
+        if dob_dt and dob_dt <= datetime.datetime.now(datetime.timezone.utc).date():
+            age = (
+                datetime.datetime.now(datetime.timezone.utc).date() - dob_dt
+            ).days / 365.25
             if age >= 16:
                 pts = 15
                 score += pts
@@ -133,7 +138,7 @@ def compute_validation_score(
         score += pts
         breakdown["insurance_no_dob_penalty_offset"] = pts
 
-        if issue_dt and issue_dt <= datetime.date.today():
+        if issue_dt and issue_dt <= datetime.datetime.now(datetime.timezone.utc).date():
             pts = 10
             score += pts
             breakdown["issue_valid"] = pts

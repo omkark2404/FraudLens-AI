@@ -101,7 +101,7 @@ def upload():
         return redirect(url_for("upload.status", job_id=job_id))
 
     except Exception as exc:
-        logger.error("Upload error: %s", exc, exc_info=True)
+        logger.exception("Upload error: %s", exc)
         flash("An unexpected error occurred during upload.", "danger")
         return redirect(url_for("upload.index"))
 

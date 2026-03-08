@@ -9,6 +9,7 @@ import math
 
 import cv2
 import numpy as np
+import pypdfium2 as pdfium
 from PIL import Image
 
 from core.config import config
@@ -104,10 +105,7 @@ def preprocess(image: Image.Image) -> np.ndarray:
         thresh = enhanced
 
     # 5. Reduce noise
-    if config.PREPROCESS_BLUR:
-        denoised = cv2.medianBlur(thresh, 3)
-    else:
-        denoised = thresh
+    denoised = cv2.medianBlur(thresh, 3) if config.PREPROCESS_BLUR else thresh
 
     # 6. Convert back to BGR (PaddleOCR expects colour image)
     bgr_out = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)
@@ -119,8 +117,6 @@ def preprocess(image: Image.Image) -> np.ndarray:
 
 
 # ── PDF handling ───────────────────────────────────────────────────────────────
-
-import pypdfium2 as pdfium
 
 
 def pdf_to_image(pdf_path: str, page_index: int = 0, dpi: int = 200) -> Image.Image:
@@ -190,7 +186,5 @@ def process_document(file_path: str) -> list[OCRBlock]:
         return extract_text(processed)
 
     except Exception as exc:
-        logger.error(
-            "process_document failed for %s: %s", file_path, exc, exc_info=True
-        )
+        logger.exception("process_document failed for %s: %s", file_path, exc)
         raise

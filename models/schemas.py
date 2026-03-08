@@ -27,7 +27,7 @@ class ExtractedFields:
     policy_number: str | None = None
     issue_date: str | None = None
     expiry_date: str | None = None
-    # Per-field OCR confidence (0.0–1.0, None = extracted via regex / not available)
+    # Per-field OCR confidence (0.0-1.0, None = extracted via regex / not available)
     field_confidence: dict = field(default_factory=dict)
     # Field sources: 'ocr' or 'llm'
     field_sources: dict = field(default_factory=dict)

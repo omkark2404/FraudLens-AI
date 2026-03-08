@@ -1,11 +1,13 @@
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
+
 
 import os
 
 from PIL import Image, ImageDraw, ImageFont
+
+logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = "fixtures/synthetic"
 

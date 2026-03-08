@@ -9,8 +9,10 @@ the logic is never duplicated.
 Post-processing: uploaded files are deleted after work completes (success or failure).
 """
 
+import concurrent.futures
 import logging
 import os
+import sqlite3
 
 from models.database import save_job_error, save_job_result, update_job_status
 from models.schemas import DocumentResult, JobResult
@@ -127,15 +129,13 @@ def process_job(job_id: str, dl_path: str, ic_path: str) -> None:
         logger.info("Job %s completed successfully", job_id)
 
     except Exception as exc:
-        logger.error("Job %s failed: %s", job_id, exc, exc_info=True)
+        logger.exception("Job %s failed: %s", job_id, exc)
         save_job_error(job_id, str(exc))
 
     finally:
         # Always clean up uploaded files to prevent disk accumulation
         _cleanup_files(dl_path, ic_path)
 
-
-import concurrent.futures
 
 # Global ThreadPoolExecutor for jobs
 _executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
@@ -157,5 +157,5 @@ def cleanup_stale_jobs():
             )
             conn.commit()
             logger.info("Cleaned up stale processing jobs.")
-    except Exception as e:
-        logger.error(f"Failed to clean up stale jobs: {e}")
+    except sqlite3.Error as e:
+        logger.error("Failed to clean up stale jobs: %s", e)

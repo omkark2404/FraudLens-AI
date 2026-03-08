@@ -1,8 +1,18 @@
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-lint.select = ["E", "F", "I", "W"]
-lint.ignore = ["E501"]
+# Select standard rules plus specific stricter sets for code quality
+lint.select = ["E", "F", "I", "W", "BLE", "DTZ", "G", "RUF", "SIM"]
+lint.ignore = [
+    # E501: Line too long. Justified because this project uses long regex patterns, SQL queries, and detailed test assertions that shouldn't be awkwardly wrapped.
+    "E501",
+    # G004: Logging statement uses f-string. Justified because f-strings are generally more readable and the performance hit in this low-volume prototype is completely negligible.
+    "G004",
+    # RUF012: Mutable class attributes should be annotated with `typing.ClassVar`. Justified as we use basic dicts and lists without strict generic typing wrappers in testing logic.
+    "RUF012",
+    # E402: Module level import not at top of file. Justified for scripts where logging is configured before importing internal modules.
+    "E402"
+]
 
 [tool.mypy]
 python_version = "3.11"

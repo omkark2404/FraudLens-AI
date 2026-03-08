@@ -8,9 +8,10 @@ from services.validation_service import compute_validation_score, evaluate_verdi
 class TestValidationService(unittest.TestCase):
     def test_compute_validation_score_perfect(self):
         # Setup perfect fields
-        future_date = (datetime.date.today() + datetime.timedelta(days=365)).strftime(
-            "%Y-%m-%d"
-        )
+        future_date = (
+            datetime.datetime.now(datetime.timezone.utc).date()
+            + datetime.timedelta(days=365)
+        ).strftime("%Y-%m-%d")
         fields = ExtractedFields(
             name="JOHN DOE",
             dob="1990-01-01",
@@ -54,9 +55,10 @@ class TestValidationService(unittest.TestCase):
         )
 
     def test_evaluate_verdict_quality(self):
-        future_date = (datetime.date.today() + datetime.timedelta(days=365)).strftime(
-            "%Y-%m-%d"
-        )
+        future_date = (
+            datetime.datetime.now(datetime.timezone.utc).date()
+            + datetime.timedelta(days=365)
+        ).strftime("%Y-%m-%d")
         fields = ExtractedFields(
             name="JOHN DOE",
             dob="1990-01-01",
