@@ -3,23 +3,23 @@ Werkzeug==2.3.7
 python-dotenv==1.0.1
 flask-cors==4.0.0
 
-paddlepaddle
-paddleocr
-opencv-python-headless
-Pillow
-pypdfium2
-numpy
+paddlepaddle==2.6.0
+paddleocr==2.7.3
+opencv-python-headless==4.9.0.80
+Pillow==10.2.0
+pypdfium2==4.27.0
+numpy==1.26.4
 python-dateutil==2.8.2
 gunicorn==21.2.0
 
-google-generativeai
+google-generativeai==0.4.0
 
 # Dev Dependencies
 pytest==8.0.0
 ruff==0.3.0
 mypy==1.8.0
-types-python-dateutil
-types-Flask-Cors
+types-python-dateutil==2.8.19.20240106
+types-Flask-Cors==4.0.0.20240106
 
 # Windows Production Server
 waitress==3.0.0
