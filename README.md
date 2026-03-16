@@ -15,8 +15,7 @@ FraudLens-AI addresses the challenge of manually verifying documents like driver
 - **Heuristic Fraud Detection**: Flags documents for bounding box variance, overlapping text, or missing critical fields.
 - **Asynchronous Processing**: Uses a bounded `ThreadPoolExecutor` and SQLite with Write-Ahead Logging (WAL) to process documents without blocking the main web request.
 - **REST API**: Provides endpoints for uploading documents and polling job status, secured by API key authentication.
-
-**Note on PII & Job Tracking:** The /api/v1/jobs endpoint currently returns recent jobs across the system. In this single-tenant prototype, this is expected. For a multi-tenant production environment, this endpoint should be heavily scoped by a User ID or Tenant ID to prevent cross-user PII leakage.
+  - *Note on PII & Job Tracking:* The `/api/v1/jobs` endpoint currently returns recent jobs across the system. In this single-tenant prototype, this is expected. For a multi-tenant production environment, this endpoint should be heavily scoped by a User ID or Tenant ID to prevent cross-user PII leakage.
 - **Strict Security**: Validates uploaded files using magic-byte inspection (not just extensions/mime types) to ensure safety.
 
 ## Privacy & Security
