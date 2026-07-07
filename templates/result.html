@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OCR extraction results — FraudLens AI">
+    <title>Results — FraudLens AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="particles-bg"></div>
+    <main class="main-3d-container results-main">
+        <div class="results-wrapper">
+
+            <!-- ── Header ─────────────────────────────────────────────── -->
+            <section class="glass-card results-header-card">
+                <header class="glass-header">
+                    <span class="glass-icon"><i class="fas fa-check-circle"></i></span>
+                    <h1>Extraction Complete</h1>
+                    <p class="subtitle">AI-powered document analysis results</p>
+                    <span class="job-id-badge"><i class="fas fa-fingerprint"></i> Job: {{ job_id[:8] }}…</span>
+                </header>
+
+                <!-- Expiry alerts -->
+                {% if data.license and data.license.fields.expired %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Driver's License has <strong>EXPIRED</strong>
+                    </div>
+                {% endif %}
+                {% if data.insurance and data.insurance.fields.expired %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Insurance Card has <strong>EXPIRED</strong>
+                    </div>
+                {% endif %}
+            </section>
+
+            <!-- ── Driver's License ───────────────────────────────────── -->
+            {% if data.license %}
+            {% set lic = data.license %}
+            <section class="glass-card doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon"><i class="fas fa-id-card"></i></span>
+                    <h2>Driver's License</h2>
+                </div>
+
+                <div class="results-grid">
+                    <!-- Fields card -->
+                    <div class="info-card">
+                        <div class="card-header"><i class="fas fa-user"></i><h3>Extracted Fields</h3></div>
+
+                        {% macro field_conf(doc, key) %}
+                          {% if doc.fields.field_confidence and doc.fields.field_confidence[key] is defined %}
+                            <span class="conf-badge" title="OCR confidence for this field">
+                              {{ (doc.fields.field_confidence[key] * 100)|round(0)|int }}%
+                            </span>
+                          {% elif doc.fields.field_confidence and key in doc.fields.field_confidence and doc.fields.field_confidence[key] is none %}
+                            <span class="conf-badge conf-regex" title="Extracted via regex">regex</span>
+                          {% endif %}
+                        {% endmacro %}
+
+                        <div class="form-group">
+                          <label>Full Name {{ field_conf(lic, 'name') }}</label>
+                          <input type="text" value="{{ lic.fields.name or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>Date of Birth {{ field_conf(lic, 'dob') }}</label>
+                          <input type="text" value="{{ lic.fields.dob or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>License Number {{ field_conf(lic, 'license_number') }}</label>
+                          <input type="text" value="{{ lic.fields.license_number or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>Issue Date {{ field_conf(lic, 'issue_date') }}</label>
+                          <input type="text" value="{{ lic.fields.issue_date or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>Expiry Date {{ field_conf(lic, 'expiry_date') }}</label>
+                          <input type="text" value="{{ lic.fields.expiry_date or 'Not detected' }}"
+                                 readonly class="{{ 'expired' if lic.fields.expired }}">
+                        </div>
+                    </div>
+
+                    <!-- Validation card -->
+                    <div class="info-card">
+                        <div class="card-header"><i class="fas fa-chart-bar"></i><h3>Validation Score</h3></div>
+                        <div class="score-display">
+                            <div class="score-circle" data-score="{{ lic.validation.score }}">
+                                <svg viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="42" class="score-track"/>
+                                    <circle cx="50" cy="50" r="42" class="score-fill"
+                                            id="lic-score-fill"
+                                            stroke-dasharray="0 264"
+                                            stroke="{{ '#22c55e' if lic.validation.score >= 70 else ('#f59e0b' if lic.validation.score >= 40 else '#ef4444') }}"/>
+                                </svg>
+                                <div class="score-number" id="lic-score-num">0</div>
+                            </div>
+                            <div class="score-label">
+                                {% if lic.validation.score >= 70 %}
+                                    <span class="score-tag score-green">High Confidence</span>
+                                {% elif lic.validation.score >= 40 %}
+                                    <span class="score-tag score-amber">Moderate</span>
+                                {% else %}
+                                    <span class="score-tag score-red">Low Confidence</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="score-breakdown">
+                            {% for k, v in lic.validation.breakdown.items() %}
+                                {% if k != 'avg_ocr_confidence' %}
+                                <div class="breakdown-row">
+                                    <span>{{ k.replace('_', ' ').title() }}</span>
+                                    <span class="breakdown-pts {{ 'pts-green' if v > 0 else 'pts-grey' }}">
+                                        {{ '+' + v|string if v > 0 else '0' }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                            {% if lic.validation.breakdown.avg_ocr_confidence is defined %}
+                            <div class="breakdown-row">
+                                <span>Avg OCR Confidence</span>
+                                <span class="breakdown-pts">{{ (lic.validation.breakdown.avg_ocr_confidence * 100)|round(1) }}%</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Fraud card -->
+                    <div class="info-card">
+                        <div class="card-header"><i class="fas fa-shield-alt"></i><h3>Fraud Analysis</h3></div>
+                        <div class="fraud-badge-wrap">
+                            {% if lic.fraud.status == 'Valid' %}
+                                <div class="fraud-badge fraud-valid">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Document Valid</span>
+                                </div>
+                            {% else %}
+                                <div class="fraud-badge fraud-suspicious">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Suspicious</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if lic.fraud.flags %}
+                            <div class="fraud-flags">
+                                <p class="flags-label"><i class="fas fa-flag"></i> Anomalies detected:</p>
+                                <ul>
+                                    {% for flag in lic.fraud.flags %}
+                                        <li>{{ flag }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <p class="no-flags"><i class="fas fa-check"></i> No anomalies detected</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- ── Insurance Card ─────────────────────────────────────── -->
+            {% if data.insurance %}
+            {% set ins = data.insurance %}
+            <section class="glass-card doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon"><i class="fas fa-shield-alt"></i></span>
+                    <h2>Insurance Card</h2>
+                </div>
+
+                <div class="results-grid">
+                    <div class="info-card">
+                        <div class="card-header"><i class="fas fa-file-alt"></i><h3>Extracted Fields</h3></div>
+
+                        {% macro ins_conf(key) %}
+                          {% if ins.fields.field_confidence and ins.fields.field_confidence[key] is defined %}
+                            <span class="conf-badge" title="OCR confidence for this field">
+                              {{ (ins.fields.field_confidence[key] * 100)|round(0)|int }}%
+                            </span>
+                          {% elif ins.fields.field_confidence and key in ins.fields.field_confidence and ins.fields.field_confidence[key] is none %}
+                            <span class="conf-badge conf-regex" title="Extracted via regex">regex</span>
+                          {% endif %}
+                        {% endmacro %}
+
+                        <div class="form-group">
+                          <label>Insured Name {{ ins_conf('name') }}</label>
+                          <input type="text" value="{{ ins.fields.name or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>Date of Birth {{ ins_conf('dob') }}</label>
+                          <input type="text" value="{{ ins.fields.dob or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>Policy Number {{ ins_conf('license_number') }}</label>
+                          <input type="text" value="{{ ins.fields.license_number or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>Effective Date {{ ins_conf('issue_date') }}</label>
+                          <input type="text" value="{{ ins.fields.issue_date or 'Not detected' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                          <label>Expiry Date {{ ins_conf('expiry_date') }}</label>
+                          <input type="text" value="{{ ins.fields.expiry_date or 'Not detected' }}"
+                                 readonly class="{{ 'expired' if ins.fields.expired }}">
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="card-header"><i class="fas fa-chart-bar"></i><h3>Validation Score</h3></div>
+                        <div class="score-display">
+                            <div class="score-circle" data-score="{{ ins.validation.score }}">
+                                <svg viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="42" class="score-track"/>
+                                    <circle cx="50" cy="50" r="42" class="score-fill"
+                                            id="ins-score-fill"
+                                            stroke-dasharray="0 264"
+                                            stroke="{{ '#22c55e' if ins.validation.score >= 70 else ('#f59e0b' if ins.validation.score >= 40 else '#ef4444') }}"/>
+                                </svg>
+                                <div class="score-number" id="ins-score-num">0</div>
+                            </div>
+                            <div class="score-label">
+                                {% if ins.validation.score >= 70 %}
+                                    <span class="score-tag score-green">High Confidence</span>
+                                {% elif ins.validation.score >= 40 %}
+                                    <span class="score-tag score-amber">Moderate</span>
+                                {% else %}
+                                    <span class="score-tag score-red">Low Confidence</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="score-breakdown">
+                            {% for k, v in ins.validation.breakdown.items() %}
+                                {% if k != 'avg_ocr_confidence' %}
+                                <div class="breakdown-row">
+                                    <span>{{ k.replace('_', ' ').title() }}</span>
+                                    <span class="breakdown-pts {{ 'pts-green' if v > 0 else 'pts-grey' }}">
+                                        {{ '+' + v|string if v > 0 else '0' }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                            {% if ins.validation.breakdown.avg_ocr_confidence is defined %}
+                            <div class="breakdown-row">
+                                <span>Avg OCR Confidence</span>
+                                <span class="breakdown-pts">{{ (ins.validation.breakdown.avg_ocr_confidence * 100)|round(1) }}%</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="card-header"><i class="fas fa-shield-alt"></i><h3>Fraud Analysis</h3></div>
+                        <div class="fraud-badge-wrap">
+                            {% if ins.fraud.status == 'Valid' %}
+                                <div class="fraud-badge fraud-valid">
+                                    <i class="fas fa-check-circle"></i><span>Document Valid</span>
+                                </div>
+                            {% else %}
+                                <div class="fraud-badge fraud-suspicious">
+                                    <i class="fas fa-exclamation-triangle"></i><span>Suspicious</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if ins.fraud.flags %}
+                            <div class="fraud-flags">
+                                <p class="flags-label"><i class="fas fa-flag"></i> Anomalies detected:</p>
+                                <ul>{% for flag in ins.fraud.flags %}<li>{{ flag }}</li>{% endfor %}</ul>
+                            </div>
+                        {% else %}
+                            <p class="no-flags"><i class="fas fa-check"></i> No anomalies detected</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- ── API Response Preview ───────────────────────────────── -->
+            <section class="glass-card api-preview-card">
+                <div class="api-preview-header" id="api-toggle" onclick="toggleApiPreview()">
+                    <span><i class="fas fa-code"></i> Raw API Response</span>
+                    <i class="fas fa-chevron-down" id="api-chevron"></i>
+                </div>
+                <div id="api-preview-body" class="api-preview-body hidden">
+                    <pre id="api-json-content">{{ data | tojson(indent=2) }}</pre>
+                </div>
+            </section>
+
+            <a href="/" class="back-btn-3d">
+                <i class="fas fa-arrow-left"></i>
+                <span>Process New Documents</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        function toggleApiPreview() {
+            const body = document.getElementById('api-preview-body');
+            const chevron = document.getElementById('api-chevron');
+            body.classList.toggle('hidden');
+            chevron.style.transform = body.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/results.js') }}"></script>
+</body>
+</html>
