@@ -1,329 +1,231 @@
-# FraudLens AI ⚡ — Intelligent Document Processing System
+# FraudLens-AI
 
-> FraudLens AI is an intelligent document verification system focused on fraud detection, featuring an AI-powered OCR pipeline for Driver's Licenses and Insurance Cards with **validation scoring**, **fraud detection**, **async job processing**, and a full **REST API**.
+FraudLens-AI is a web application that processes uploaded identity and insurance documents to extract structured data, validate their contents, and flag potential anomalies. It uses PaddleOCR for text extraction and applies a rule-based engine to compute validation scores and detect signs of tampering or poor document quality.
 
----
+## Overview
 
-## 🧠 Tech Stack
+FraudLens-AI addresses the challenge of manually verifying documents like driver's licenses and insurance cards. Users upload document images or PDFs, which are processed asynchronously. The application extracts key fields (name, dates, license/policy numbers), validates the extracted information to generate a confidence score, and runs heuristic checks to flag suspicious documents. The output is a structured JSON result or a visual report indicating the document's validity and any detected anomalies.
 
-| Layer | Technology |
+## Key Features
+
+- **Document Processing**: Supports Driver's Licenses and Insurance Cards in JPG, PNG, and PDF formats.
+- **Image Preprocessing**: Enhances contrast, removes noise, and deskews images before OCR to improve accuracy.
+- **Hybrid Data Extraction**: Uses spatial proximity, regex, and an optional LLM fallback to extract fields from OCR blocks.
+- **Validation Scoring**: Computes a 0-100 score based on field presence, date validity, and OCR confidence.
+- **Heuristic Fraud Detection**: Flags documents as "Suspicious" based on bounding box variance, overlapping text, missing critical fields, or low OCR confidence.
+- **Asynchronous Processing**: Uses background threads to process documents without blocking the main web request.
+- **REST API**: Provides endpoints for uploading documents and polling job status.
+
+## How It Works
+
+1. **Document Upload**: Users upload files via the web interface or API.
+2. **Async Job Creation**: A job is created in the SQLite database, and processing begins in a background daemon thread.
+3. **Image Preprocessing**: Files are resized, converted to grayscale, enhanced with CLAHE, thresholded, denoised, and deskewed.
+4. **OCR Extraction**: PaddleOCR extracts text blocks, bounding boxes, and confidence scores.
+5. **Field Extraction**: The engine identifies the document type, then extracts fields using keyword proximity, regex, and an optional Gemini LLM fallback if multiple fields are missing.
+6. **Validation & Fraud Checks**: The extracted data is scored for validity, and bounding boxes/text are analyzed for fraud heuristics.
+7. **Result Delivery**: The job is marked as done, uploaded files are securely deleted, and the user can view the extracted JSON data.
+
+## Architecture
+
+- **Frontend**: HTML/JS templates rendered with Jinja2 (`templates/`, `static/`). Uses polling to check job status.
+- **Flask Backend**: Blueprints route web traffic (`upload_routes.py`) and API traffic (`api_routes.py`).
+- **Services**: Business logic is separated into single-responsibility modules (`job_service.py`, `ocr_service.py`, `extraction_service.py`, `validation_service.py`).
+- **Database**: SQLite stores job states (`pending`, `processing`, `done`, `error`) and final JSON results.
+- **Async Workers**: Built-in Python `threading.Thread(daemon=True)` handles long-running OCR tasks in the background.
+
+## OCR Pipeline
+
+The OCR pipeline in `ocr_service.py` is designed to maximize extraction accuracy from varied real-world uploads:
+- **PDF Rendering**: PyMuPDF converts PDFs to images.
+- **Resizing**: Caps image dimensions to 2400 pixels to optimize OCR speed and memory usage.
+- **Preprocessing**: OpenCV applies grayscale conversion, CLAHE contrast enhancement, adaptive Gaussian thresholding, and median blur.
+- **Deskewing**: Canny edge detection and Hough line transforms identify and correct image rotation.
+- **PaddleOCR**: Extracts text and bounding boxes. Low-confidence blocks (<0.6) are discarded.
+
+## Document / Field Extraction
+
+Field extraction in `extraction_service.py` is primarily rule-based and spatial:
+- **Document Detection**: Infers "license" or "insurance" based on the presence of specific keywords in the aggregated text.
+- **Keyword + Proximity**: Searches for anchor words (e.g., "DOB", "EXP") and finds the nearest valid text block strictly to the right or below the anchor. Supports multi-line extraction for addresses and names.
+- **Global Regex**: Scans the entire text for date formats and license number patterns.
+- **LLM Fallback**: If two or more critical fields (name, license, dates) are missing after rules are applied, it falls back to the Gemini API (`gemini-1.5-flash`) passing the raw text to fill in the gaps.
+
+## Validation
+
+The validation engine computes a score out of 100 based on the presence and logical correctness of fields:
+- Name present: +20
+- DOB valid: +15
+- Issue date valid: +15
+- Expiry date valid: +15
+- Expiry date is in the future: +10
+- License/Policy number matches expected format: +10
+- Average OCR confidence is high (≥ 0.75): +15
+
+## Fraud / Anomaly Detection
+
+Fraud detection relies on geometric and logical heuristics, **not** a trained machine-learning classifier. A document is flagged as "Suspicious" if 2 or more of the following anomalies are detected:
+- **Inconsistent Text Sizing**: High variance (Coefficient of Variation > 2.5) in OCR bounding box areas, suggesting pasted text.
+- **Overlapping Text**: More than 5 overlapping bounding boxes, indicating layout tampering.
+- **Missing Critical Fields**: The name or license number could not be extracted at all.
+- **Low OCR Confidence**: The average confidence of all text blocks is below 0.5.
+
+## Tech Stack
+
+| Category | Technology |
 |---|---|
-| Backend | Python 3.9+ · Flask 2.3 |
-| OCR Engine | PaddleOCR 2.7 (PaddlePaddle 2.6) |
-| Image Processing | OpenCV 4.8 · Pillow 10 |
-| PDF Rendering | PyMuPDF (fitz) |
-| Database | SQLite (stdlib) — *Note: For production at scale, replace with PostgreSQL* |
-| Frontend | Vanilla HTML/CSS/JS (glassmorphism dark UI) |
-| Async Jobs | Python `threading` (no Redis required) |
-| Config | `python-dotenv` |
+| Backend | Flask, Werkzeug, Gunicorn |
+| OCR | PaddleOCR, PaddlePaddle |
+| Image Processing | OpenCV (cv2), Pillow, Numpy |
+| PDF Processing | PyMuPDF (fitz) |
+| Database | SQLite |
+| Async Processing | Python `threading` |
+| LLM Fallback | Google Generative AI (Gemini) |
 
----
-
-## 🏗️ Architecture
+## Project Structure
 
 ```text
-User ──► UI ──► Flask API ──► Job Thread ──► OCR ──► Extraction ──► Validation ──► DB
-                 ▲                 │
-                 └─────────────────┘
-                   poll /api/result
-```
-
-```text
-OCRScanner/
-├── app.py                   # Entry point (python app.py)
-├── .env                     # Environment variables
-├── .env.example             # Example environment variables
-├── requirements.txt         # Python dependencies
-│
+FraudLens-AI/
+├── app.py                     # Application entry point
 ├── core/
-│   ├── config.py            # Centralised env-based config
-│   └── app_factory.py       # Flask application factory
-│
-├── services/
-│   ├── ocr_service.py       # OCR pipeline: preprocess → PaddleOCR → OCRBlocks
-│   ├── extraction_service.py # Hybrid extraction: keyword + proximity + regex + optional Gemini LLM fallback
-│   ├── job_service.py       # Async job orchestration
-│   └── validation_service.py # Validation score (0-100) + fraud detection
-│
+│   ├── app_factory.py         # Flask app initialization
+│   └── config.py              # Configuration and environment variables
 ├── models/
-│   ├── database.py          # SQLite CRUD helpers
-│   └── schemas.py           # Typed dataclasses (OCRBlock, ExtractedFields, …)
-│
+│   ├── database.py            # SQLite CRUD operations
+│   └── schemas.py             # Data structures and type hints
 ├── routes/
-│   ├── upload_routes.py     # HTML routes: /, /upload, /status/<id>, /result/<id>
-│   └── api_routes.py        # REST API: /api/health, /api/upload, /api/result/<id>, /api/jobs
-│
-├── static/
-│   ├── css/style.css        # Design system (glassmorphism, dark mode)
-│   └── js/
-│       ├── script.js        # Shared UI (particles, tilt, drag-drop, form)
-│       ├── poll.js          # Polling loop for status page
-│       └── results.js       # Score circle animations
-│
-├── templates/
-│   ├── index.html           # Upload page
-│   ├── status.html          # Async polling/status page
-│   └── result.html          # Results: fields + score + fraud + JSON preview
-│
-└── utils/                   # (Legacy: currently unused)
+│   ├── api_routes.py          # JSON API endpoints
+│   └── upload_routes.py       # HTML template endpoints
+├── services/
+│   ├── extraction_service.py  # Regex, spatial, and LLM extraction logic
+│   ├── job_service.py         # Async job orchestrator
+│   ├── ocr_service.py         # Image preprocessing and PaddleOCR
+│   └── validation_service.py  # Scoring and fraud heuristics
+├── templates/                 # Jinja2 HTML templates
+├── static/                    # CSS, JS, and static assets
+├── requirements.txt           # Python dependencies
+└── .env.example               # Example environment variables
 ```
 
----
+## API Reference
 
-## ⚙️ OCR Pipeline
-
-```
-Document (image / PDF)
-        │
-        ▼
-  pdf_to_image()         ← PyMuPDF renders PDF @ 200 DPI
-        │
-        ▼
-  preprocess()
-    ├─ Resize to max 2400px
-    ├─ Grayscale
-    ├─ CLAHE contrast enhancement
-    ├─ Adaptive threshold (Gaussian)
-    ├─ Median blur (noise removal)
-    └─ Deskew via Hough transform
-        │
-        ▼
-  PaddleOCR (use_angle_cls=True)
-        │
-        ▼
-  [OCRBlock(text, bbox, confidence), …]
-  (blocks below confidence threshold dropped)
-```
-
----
-
-## 🧬 Intelligent Extraction
-
-Hybrid three-stage pipeline:
-
-1. **Keyword anchoring** — scans all OCR blocks for keywords (`NAME`, `DOB`, `DL`, `EXP`, `INSURED`, etc.)
-2. **Proximity-based value lookup** — finds the nearest block to the right or below the keyword anchor
-3. **Regex fallback** — extracts dates and license number patterns from full text when keyword lookup fails
-
----
-
-## 🛡️ Validation Score (0–100)
-
-| Criterion | Points |
-|---|---|
-| Name present | +20 |
-| DOB is a valid date | +15 |
-| Issue date is a valid date | +15 |
-| Expiry date is a valid date | +15 |
-| Document not expired | +10 |
-| License/policy number valid format | +10 |
-| Avg OCR confidence ≥ 0.75 | +15 |
-
----
-
-## 🕵️ Fraud Detection
-
-Four heuristics analysed per document:
-
-| Check | Trigger |
-|---|---|
-| Inconsistent text sizing | Bounding-box area coefficient of variation > 2.5 |
-| Overlapping text | More than 5 overlapping bounding-box pairs |
-| Missing critical fields | Name or license/policy number absent |
-| Low OCR confidence | Average confidence < 0.5 |
-
-Result: `"Valid"` or `"Suspicious"` with a list of flagged anomalies.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Python 3.9+
-- `pip`
-
-### Installation
-
-```bash
-git clone https://github.com/Hmishra230/OCR_SCANNER.git
-cd OCRScanner
-pip install -r requirements.txt
-cp .env .env.local   # edit values if needed
-```
-
-### Run locally
-
-```bash
-python app.py
-# → http://localhost:5000
-```
-
----
-
-## 📡 REST API
-
-### POST `/api/upload`
-
-Upload two documents and receive a `job_id` for async polling.
-
-**Example cURL Request**:
-```bash
-curl -X POST http://localhost:5000/api/upload \
-  -F "license_file=@dl.jpg" \
-  -F "insurance_file=@ic.jpg"
-```
-
-**Request** — `multipart/form-data`:
-| Field | Type | Required |
-|---|---|---|
-| `license_file` | file (jpg/png/pdf) | ✅ |
-| `insurance_file` | file (jpg/png/pdf) | ✅ |
-
-**Response** `202 Accepted`:
+### Upload Documents
+- **Endpoint**: `POST /api/upload`
+- **Purpose**: Submits documents for processing and starts a background job.
+- **Request**: `multipart/form-data` containing `license_file` and `insurance_file`.
+- **Response**: `202 Accepted`
 ```json
-{ "job_id": "a3f2c1d0-...", "status": "pending" }
+{
+  "job_id": "uuid-string",
+  "status": "pending"
+}
 ```
 
----
-
-### GET `/api/result/<job_id>`
-
-Poll for job result.
-
-**Response while processing** `202`:
+### Get Job Result
+- **Endpoint**: `GET /api/result/<job_id>`
+- **Purpose**: Polls for job completion and retrieves the final extracted data.
+- **Response (Processing)**: `202 Accepted`
 ```json
-{ "status": "processing" }
+{
+  "status": "processing"
+}
 ```
-
-**Response on completion** `200`:
+- **Response (Done)**: `200 OK`
 ```json
 {
   "status": "done",
   "data": {
-    "job_id": "a3f2c1d0-...",
-    "license": {
-      "doc_type": "license",
-      "fields": {
-        "name": "JOHN A. DOE",
-        "dob": "1990-05-14",
-        "license_number": "D1234567",
-        "issue_date": "2020-01-15",
-        "expiry_date": "2026-01-15",
-        "expired": false
-      },
-      "validation": {
-        "score": 85,
-        "breakdown": {
-          "name_present": 20,
-          "dob_valid": 15,
-          "issue_date_valid": 15,
-          "expiry_date_valid": 15,
-          "not_expired": 10,
-          "license_format_valid": 10,
-          "high_ocr_confidence": 0,
-          "avg_ocr_confidence": 0.71
-        }
-      },
-      "fraud": {
-        "status": "Valid",
-        "flags": []
-      }
-    },
-    "insurance": {
-      "doc_type": "insurance",
-      "fields": {
-        "name": "JOHN DOE",
-        "dob": null,
-        "license_number": "POL-9988771",
-        "issue_date": "2024-07-01",
-        "expiry_date": "2025-07-01",
-        "expired": true
-      },
-      "validation": {
-        "score": 55,
-        "breakdown": {
-          "name_present": 20,
-          "dob_valid": 0,
-          "issue_date_valid": 15,
-          "expiry_date_valid": 15,
-          "not_expired": 0,
-          "license_format_valid": 5,
-          "high_ocr_confidence": 0,
-          "avg_ocr_confidence": 0.68
-        }
-      },
-      "fraud": {
-        "status": "Valid",
-        "flags": []
-      }
-    },
-    "error": null
+    "license": { ... },
+    "insurance": { ... }
   }
 }
 ```
 
-**Response on error** `500`:
-```json
-{ "status": "error", "error": "OCR engine failed: ..." }
-```
-
----
-
-### GET `/api/jobs`
-
-Returns the 20 most recent jobs.
-
+### List Recent Jobs
+- **Endpoint**: `GET /api/jobs`
+- **Purpose**: Returns the 20 most recent jobs.
+- **Response**: `200 OK`
 ```json
 [
-  { "id": "a3f2c1d0-...", "status": "done", "created_at": "2025-04-17 12:00:00" },
-  ...
+  {
+    "id": "uuid-string",
+    "status": "done",
+    "created_at": "YYYY-MM-DD HH:MM:SS"
+  }
 ]
 ```
 
----
+## Installation & Local Setup
 
-## ☁️ Deployment
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/omkark2404/FraudLens-AI.git
+   cd FraudLens-AI
+   ```
 
-### Recommended: VPS or Container Platform
-Deploy on robust platforms like **Render**, **Railway**, or **Fly.io** due to PaddleOCR's model size (~800MB) and ML processing times.
+2. **Create and activate a virtual environment** (recommended):
+   ```bash
+   python -m venv venv
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
 
-> ⚠️ **Note**: Serverless platforms (like Vercel or AWS Lambda) are **not recommended** for this backend due to cold starts, upload size limits, and max execution timeouts (typically 10-30s). 
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Docker / VPS Example
+4. **Configure environment variables**:
+   Copy `.env.example` to `.env` and adjust the values as needed.
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-pip install gunicorn
-gunicorn app:app --workers 2 --bind 0.0.0.0:8000
-```
+5. **Start the application**:
+   ```bash
+   python app.py
+   ```
+   The application will be available locally at `http://localhost:5000`.
 
----
+## Environment Variables
 
-## 🔬 Why This Is Hard (and how we solved it)
+Configure these in your `.env` file based on `.env.example`:
 
-Building an OCR system is deceptively complex. A standard regex script will break instantly in the real world. 
+- `SECRET_KEY`: Random string for Flask sessions (Required).
+- `FLASK_DEBUG`: Enables Flask debug mode if set to `true`.
+- `MAX_UPLOAD_MB`: Maximum file upload size in megabytes.
+- `DB_NAME`: Filename for the SQLite database.
+- `OCR_CONF_THRESHOLD`: Minimum confidence (0.0 - 1.0) for accepting PaddleOCR blocks.
+- `HIGH_CONF_THRESHOLD`: Threshold for earning the high-confidence validation bonus.
+- `FRAUD_THRESHOLD`: Number of anomalies required to flag a document as suspicious.
+- `GEMINI_API_KEY`: API key for Gemini LLM fallback (Optional).
 
-Here are the key challenges this architecture solves:
-1. **OCR Noise**: Mobile photos are blurry, rotated, and poorly lit. We fix this via OpenCV using CLAHE contrast enhancement and Hough Transform deskewing.
-2. **Spatial Layouts**: Every state and insurance company uses different document layouts. We built a **hybrid extraction engine** that anchors to keywords (like `"DOB:"`) and uses spatial nearest-neighbour proximity checks to find the value, falling back on regex only as a last resort.
-3. **Fraud Detection**: Cropped documents or manually edited expiration dates can easily fool simple parsers. Our validation service detects inconsistencies in font sizes (bounding-box CV analysis) and overlapping text blocks to flag tampering automatically.
+## Database
 
----
+FraudLens-AI currently uses **SQLite** for data persistence (`models/database.py`).
+- **Why SQLite**: It allows for a zero-configuration local setup, making it easy to run and test the application without spinning up a separate database server.
+- **Data Stored**: A single `jobs` table tracks the `job_id`, `status` (pending, processing, done, error), timestamps, and a `result_json` column storing the final processed output.
+- **Concurrency**: Thread safety is managed by explicitly opening a new database connection per call (`check_same_thread=False`).
 
-## 🔐 Environment Variables
+## Async Processing
 
-| Variable | Default | Description |
-|---|---|---|
-| `SECRET_KEY` | `change-me-in-production` | Flask session secret |
-| `FLASK_DEBUG` | `false` | Enable debug mode |
-| `MAX_UPLOAD_MB` | `16` | Max file upload size |
-| `DB_NAME` | `ocr_jobs.db` | SQLite database filename |
-| `OCR_CONF_THRESHOLD` | `0.6` | Min OCR block confidence |
-| `HIGH_CONF_THRESHOLD` | `0.75` | Threshold for score bonus |
-| `FRAUD_THRESHOLD` | `2` | Anomalies needed to flag as Suspicious |
-| `GEMINI_API_KEY` | (empty) | Optional: Gemini API key for LLM fallback extraction |
+Document OCR is computationally intensive. To prevent the web server from blocking during document uploads:
+- **What is asynchronous**: The entire document pipeline (OCR, extraction, validation) runs asynchronously in `services/job_service.py`.
+- **How it works**: The backend responds immediately to the upload request with a `job_id` and `status=pending`. A background thread (`threading.Thread`) is spawned to handle the heavy lifting.
+- **Job Status**: The frontend uses Javascript to poll the `/api/result/<job_id>` endpoint until the background thread marks the job as `done` or `error` in the SQLite database.
 
----
+## Limitations
 
-## 📜 License
+- **Heuristic-Based Fraud**: Fraud detection relies on layout heuristics (e.g., bounding box variance). It is not a trained ML classification model and cannot detect deepfakes or sophisticated pixel-level tampering.
+- **OCR Dependency**: The accuracy of field extraction is heavily dependent on the quality of the uploaded image and the capabilities of PaddleOCR.
+- **Thread Scaling**: Using Python's built-in `threading` works for small-scale deployments but is not suitable for high-traffic production environments, as it lacks task persistence, queuing, and distributed worker capabilities.
+- **Database Scaling**: SQLite is sufficient for development and light usage but will encounter concurrency limitations under heavy concurrent writes.
 
-MIT License — see `LICENSE` for details.
+## Future Improvements
+
+- **Production Task Queue**: Migrate async processing from built-in threads to Celery with a Redis broker for scalable, distributed job processing.
+- **PostgreSQL Migration**: Replace SQLite with PostgreSQL to handle concurrent database operations reliably in a production environment.
+- **Advanced Tampering Detection**: Integrate computer vision models trained specifically to detect digital forgery, metadata manipulation, or inconsistent EXIF data.
+- **More Document Templates**: Expand the rule-based extraction to reliably support passports, ID cards from various countries, and specialized insurance forms.
