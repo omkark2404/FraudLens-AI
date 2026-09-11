@@ -3,15 +3,15 @@ Werkzeug==2.3.7
 python-dotenv==1.0.1
 flask-cors==4.0.0
 
-paddlepaddle>=2.6.0
-paddleocr==2.7.0.3
-opencv-python==4.10.0.84
-Pillow==10.4.0
-PyMuPDF==1.24.11
-numpy==1.26.4
+paddlepaddle
+paddleocr
+opencv-python-headless
+Pillow
+PyMuPDF
+numpy
 
 python-dateutil==2.8.2
 
 gunicorn==21.2.0
 
-google-generativeai==0.7.2
+google-generativeai
