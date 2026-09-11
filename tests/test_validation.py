@@ -34,7 +34,8 @@ class TestValidationService(unittest.TestCase):
 
     def test_detect_fraud_missing_fields(self):
         fields = ExtractedFields(name=None, license_number=None)
-        blocks = [OCRBlock(text="TEST", bbox=[0,0,10,10], confidence=0.9)]
+        # Low confidence + missing fields = 2 anomalies = Suspicious
+        blocks = [OCRBlock(text="TEST", bbox=[0,0,10,10], confidence=0.3)]
         
         result = detect_fraud(blocks, fields)
         self.assertEqual(result.status, "Suspicious")
