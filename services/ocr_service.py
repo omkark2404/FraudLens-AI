@@ -133,7 +133,7 @@ def extract_text(processed_image: np.ndarray) -> List[OCRBlock]:
     Returns a list of OCRBlock objects with text, bbox, and confidence.
     """
     ocr = _get_ocr()
-    result = ocr.ocr(processed_image, cls=True)
+    result = ocr.ocr(processed_image)
 
     blocks: List[OCRBlock] = []
     if not result or not result[0]:
