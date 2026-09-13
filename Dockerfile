@@ -7,7 +7,7 @@ WORKDIR /app
 # Install necessary system libraries for OCR/OpenCV
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
-    libgl1-mesa-glx \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file to leverage Docker cache
