@@ -1,5 +1,7 @@
 # FraudLens-AI
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-fraudlens--ai.onrender.com-success?style=for-the-badge)](https://fraudlens-ai-6wu4.onrender.com)
+
 FraudLens-AI is a web application that processes uploaded identity and insurance documents to extract structured data, validate their contents, and flag potential anomalies. It uses PaddleOCR for text extraction and applies a rule-based engine to compute validation scores and detect signs of tampering or poor document quality.
 
 ## Overview
